@@ -10,6 +10,7 @@ import type { Express } from 'express'
 import config from 'config'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { seedCredential } from '../helpers/seedCredentials'
 import { type Product } from '../../data/types'
 import { challenges } from '../../data/datacache'
 import * as db from '../../data/mongodb'
@@ -165,10 +166,7 @@ void describe('/rest/products/reviews', () => {
   })
 
   void it('POST non-existing product review cannot be liked', async () => {
-    const { token } = await login(app, {
-      email: 'bjoern.kimminich@gmail.com',
-      password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
-    })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const res = await request(app)
       .post('/rest/products/reviews')
       .set({ Authorization: `Bearer ${token}` })
@@ -179,10 +177,7 @@ void describe('/rest/products/reviews', () => {
   })
 
   void it('POST single product review can be liked', async () => {
-    const { token } = await login(app, {
-      email: 'bjoern.kimminich@gmail.com',
-      password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
-    })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const res = await request(app)
       .post('/rest/products/reviews')
       .set({ Authorization: `Bearer ${token}` })

@@ -1,9 +1,6 @@
 describe('/#/administration', () => {
   beforeEach(() => {
-    cy.login({
-      email: 'admin',
-      password: 'admin123'
-    })
+    cy.loginAs('admin')
   })
   describe('challenge "adminSectionChallenge"', () => {
     it('should be possible to access administration section with admin user', () => {

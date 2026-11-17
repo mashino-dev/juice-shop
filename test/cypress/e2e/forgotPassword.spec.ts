@@ -48,25 +48,6 @@ describe('/#/forgot-password', () => {
   })
 
   describe('as Bjoern', () => {
-    describe('challenge "resetPasswordBjoernChallenge"', () => {
-      it('should be able to reset password with his security answer', () => {
-        cy.task<string>('GetFromConfig', 'application.domain').then(
-          (appDomain: string) => {
-            cy.get('#email').type(`bjoern@${appDomain}`)
-          }
-        )
-        cy.wait('@securityQuestion')
-        cy.get('#securityAnswer').should('not.be.disabled').focus().type('West-2082')
-        // recordings to properly fix behavior during test
-        cy.get('#newPassword').focus().type('monkey birthday ')
-        cy.get('#newPasswordRepeat').focus().type('monkey birthday ')
-        cy.get('#resetButton').click()
-
-        cy.get('.confirmation').should('not.be.hidden')
-        cy.expectChallengeSolved({ challenge: "Reset Bjoern's Password" })
-      })
-    })
-
     describe('challenge "resetPasswordBjoernOwaspChallenge"', () => {
       it('should be able to reset password with his security answer', () => {
         cy.get('#email').type('bjoern@owasp.org')

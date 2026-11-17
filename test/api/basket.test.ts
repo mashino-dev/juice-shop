@@ -10,6 +10,7 @@ import type { Express } from 'express'
 import config from 'config'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { seedCredential } from '../helpers/seedCredentials'
 import { QuantityModel } from '../../models/quantity'
 import { WalletModel } from '../../models/wallet'
 import { BasketItemModel } from '../../models/basketitem'
@@ -110,10 +111,7 @@ void describe('/api/Baskets/:id', () => {
 
 void describe('/rest/basket/:id', () => {
   void it('GET existing basket of another user', async () => {
-    const { token } = await login(app, {
-      email: 'bjoern.kimminich@gmail.com',
-      password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
-    })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const res = await request(app)
       .get('/rest/basket/2')
       .set({ Authorization: 'Bearer ' + token })
@@ -219,7 +217,7 @@ void describe('/rest/basket/:id/checkout', () => {
   })
 
   void it('POST placing an order returns an error when the wallet balance is insufficient', async () => {
-    const { token } = await login(app, { email: 'admin@' + config.get<string>('application.domain'), password: 'admin123' })
+    const { token } = await login(app, seedCredential('admin'))
     const adminAuthHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
     const itemRes = await request(app)
       .post('/api/BasketItems')
@@ -238,7 +236,7 @@ void describe('/rest/basket/:id/checkout', () => {
 
   void describe('error cases', () => {
     void it('should return 500 if QuantityModel.findOne fails during checkout', async (t) => {
-      const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+      const { token } = await login(app, seedCredential('bjoernGoogle'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       await request(app).post('/api/BasketItems').set(authHeader).send({ BasketId: 4, ProductId: 1, quantity: 1 })
 
@@ -249,7 +247,7 @@ void describe('/rest/basket/:id/checkout', () => {
     })
 
     void it('should return 500 if WalletModel.findOne fails during checkout', async (t) => {
-      const { token } = await login(app, { email: 'admin@' + config.get<string>('application.domain'), password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const adminAuthHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       await request(app).post('/api/BasketItems').set(adminAuthHeader).send({ BasketId: 1, ProductId: 1, quantity: 1 })
       t.mock.method(WalletModel, 'findOne', () => { throw new Error('Wallet error') })
@@ -260,7 +258,7 @@ void describe('/rest/basket/:id/checkout', () => {
     })
 
     void it('should return 500 if ordersCollection.insert fails during checkout', async (t) => {
-      const { token } = await login(app, { email: 'admin@' + config.get<string>('application.domain'), password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       await request(app).post('/api/BasketItems').set(authHeader).send({ BasketId: 1, ProductId: 1, quantity: 1 })
 
@@ -271,7 +269,7 @@ void describe('/rest/basket/:id/checkout', () => {
     })
 
     void it('should return 500 if basket item cleanup fails after checkout', async (t) => {
-      const { token } = await login(app, { email: 'admin@' + config.get<string>('application.domain'), password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       await request(app).post('/api/BasketItems').set(authHeader).send({ BasketId: 5, ProductId: 1, quantity: 1 })
 
@@ -283,7 +281,7 @@ void describe('/rest/basket/:id/checkout', () => {
     })
 
     void it('should return 500 if wallet bonus increment fails during checkout', async (t) => {
-      const { token } = await login(app, { email: 'admin@' + config.get<string>('application.domain'), password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       t.mock.method(WalletModel, 'increment', () => { throw new Error('Wallet increment error') })
 

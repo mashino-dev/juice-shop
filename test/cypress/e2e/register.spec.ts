@@ -5,10 +5,7 @@ describe('/#/register', () => {
 
   describe('challenge "persistedXssUserChallenge"', () => {
     beforeEach(() => {
-      cy.login({
-        email: 'admin',
-        password: 'admin123'
-      })
+      cy.loginAs('admin')
     })
 
     // FIXME Test is hanging in CI/CD pipeline. Needs dedicated troubleshooting.

@@ -5,11 +5,13 @@
 
 import { describe, it, before } from 'node:test'
 import assert from 'node:assert/strict'
+import crypto from 'node:crypto'
 import request from 'supertest'
 import type { Express } from 'express'
 import config from 'config'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { seedCredential } from '../helpers/seedCredentials'
 
 let app: Express
 
@@ -39,10 +41,7 @@ void describe('/rest/user/change-password', () => {
   })
 
   void it('GET password change with passing wrong current password', async () => {
-    const { token } = await login(app, {
-      email: 'bjoern@' + config.get<string>('application.domain'),
-      password: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase'
-    })
+    const { token } = await login(app, seedCredential('bjoern'))
 
     const res = await request(app)
       .get('/rest/user/change-password?current=definetely_wrong&new=blubb&repeat=blubb')
@@ -132,18 +131,19 @@ void describe('/rest/user/reset-password', () => {
     assert.equal(res.status, 200)
   })
 
-  void it('POST password reset for Bjoern\u00b4s internal account with correct answer to his security question', async () => {
+  void it('POST password reset for Bjoern\u00b4s internal admin account is not possible via a security question', async () => {
+    const newPassword = crypto.randomBytes(24).toString('hex')
     const res = await request(app)
       .post('/rest/user/reset-password')
       .set({ 'content-type': 'application/json' })
       .send({
         email: 'bjoern@' + config.get<string>('application.domain'),
-        answer: 'West-2082',
-        new: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase',
-        repeat: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase'
+        answer: crypto.randomBytes(12).toString('hex'),
+        new: newPassword,
+        repeat: newPassword
       })
 
-    assert.equal(res.status, 200)
+    assert.equal(res.status, 401)
   })
 
   void it('POST password reset for Bjoern\u00b4s OWASP account with correct answer to his security question', async () => {

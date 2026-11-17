@@ -9,6 +9,7 @@ import request from 'supertest'
 import type { Express } from 'express'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { seedCredential } from '../helpers/seedCredentials'
 import { challenges } from '../../data/datacache'
 import * as utils from '../../lib/utils'
 
@@ -33,7 +34,7 @@ void describe('/dataerasure', () => {
   })
 
   void it('GET erasure form rendering fails for users without assigned security answer', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
 
     const res = await request(app)
       .get('/dataerasure/')
@@ -52,7 +53,7 @@ void describe('/dataerasure', () => {
   })
 
   void it('POST erasure request does not actually delete the user', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
 
     const res = await request(app)
       .post('/dataerasure/')
@@ -65,7 +66,7 @@ void describe('/dataerasure', () => {
     const loginRes = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({ email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+      .send(seedCredential('bjoernGoogle'))
 
     assert.equal(loginRes.status, 200)
   })
@@ -79,7 +80,7 @@ void describe('/dataerasure', () => {
   })
 
   void it('POST erasure request with empty layout parameter returns', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
 
     const res = await request(app)
       .post('/dataerasure/')
@@ -91,7 +92,7 @@ void describe('/dataerasure', () => {
 
   if (utils.isChallengeEnabled(challenges.lfrChallenge)) {
     void it('POST erasure request with non-existing file path as layout parameter throws error', async () => {
-      const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+      const { token } = await login(app, seedCredential('bjoernGoogle'))
 
       const res = await request(app)
         .post('/dataerasure/')
@@ -103,7 +104,7 @@ void describe('/dataerasure', () => {
     })
 
     void it('POST erasure request with existing file path as layout parameter returns content truncated', async () => {
-      const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+      const { token } = await login(app, seedCredential('bjoernGoogle'))
 
       const res = await request(app)
         .post('/dataerasure/')

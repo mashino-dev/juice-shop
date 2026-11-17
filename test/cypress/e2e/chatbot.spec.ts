@@ -5,7 +5,7 @@
 
 describe('challenge "systemPromptExtractionChallenge"', () => {
   beforeEach(() => {
-    cy.login({ email: 'admin', password: 'admin123' })
+    cy.loginAs('admin')
   })
 
   it('should solve the challenge when extracted system prompt is submitted via complaint form', () => {

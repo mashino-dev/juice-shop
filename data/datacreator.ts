@@ -36,10 +36,13 @@ import { AllHtmlEntities as Entities } from 'html-entities'
 import * as datacache from './datacache'
 import * as security from '../lib/insecurity'
 import { variableDependencies, domainDependencies, preconditionResults } from '../lib/startup/validatePreconditions'
+import { CHALLENGES_UNAVAILABLE_WITHOUT_FIXED_ADMIN_CREDENTIALS, UNAVAILABLE_CHALLENGE_ENVIRONMENT, getSeedSecret, prepareSeedSecrets } from '../lib/startup/seedSecrets'
 
 const entities = new Entities()
 
 export default async () => {
+  await prepareSeedSecretsFromStaticUsers()
+
   const creators = [
     createSecurityQuestions,
     createUsers,
@@ -80,7 +83,10 @@ async function createChallenges () {
     let description = challenge.description
     let tags = challenge.tags
 
-    const { enabled: isChallengeEnabled, disabledBecause } = utils.getChallengeEnablementStatus({ disabledEnv: challenge.disabledEnv?.join(';') ?? '' } as ChallengeModel)
+    const { enabled: isEnabledByEnvironment, disabledBecause: disabledByEnvironment } = utils.getChallengeEnablementStatus({ disabledEnv: challenge.disabledEnv?.join(';') ?? '' } as ChallengeModel)
+    const lacksFixedAdminCredentials = CHALLENGES_UNAVAILABLE_WITHOUT_FIXED_ADMIN_CREDENTIALS.includes(challenge.key)
+    const isChallengeEnabled = isEnabledByEnvironment && !lacksFixedAdminCredentials
+    const disabledBecause = lacksFixedAdminCredentials ? UNAVAILABLE_CHALLENGE_ENVIRONMENT : disabledByEnvironment
     description = description.replace('juice-sh.op', config.get<string>('application.domain'))
     description = description.replace('http://htmledit.squarefree.com', config.get<string>('challenges.overwriteUrlForCsrfChallenge'))
     description = description.replace('&lt;iframe width=&quot;100%&quot; height=&quot;166&quot; scrolling=&quot;no&quot; frameborder=&quot;no&quot; allow=&quot;autoplay&quot; src=&quot;https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/771984076&amp;color=%23ff5500&amp;auto_play=true&amp;hide_related=false&amp;show_comments=true&amp;show_user=true&amp;show_reposts=false&amp;show_teaser=true&quot;&gt;&lt;/iframe&gt;', entities.encode(config.get('challenges.xssBonusPayload')))
@@ -119,7 +125,11 @@ async function createChallenges () {
       category: challenge.category,
       tags: (tags != null) ? tags.join(',') : undefined,
       // todo(@J12934) currently missing the 'not available' text. Needs changes to the model and utils functions
-      description: isChallengeEnabled ? description : (description + ' <em>(This challenge is <strong>potentially harmful</strong> on ' + disabledBecause + '!)</em>'),
+      description: isChallengeEnabled
+        ? description
+        : lacksFixedAdminCredentials
+          ? description + ' <em>(This challenge is not available because it depends on fixed admin credentials that are not shipped anymore.)</em>'
+          : (description + ' <em>(This challenge is <strong>potentially harmful</strong> on ' + disabledBecause + '!)</em>'),
       difficulty: challenge.difficulty,
       solved: false,
       mitigationUrl: showMitigations ? challenge.mitigationUrl : null,
@@ -182,12 +192,28 @@ async function createChallenges () {
   }
 }
 
+// Throws before anything is seeded if required secrets are missing or invalid (fail closed)
+async function prepareSeedSecretsFromStaticUsers () {
+  prepareSeedSecrets(await loadStaticUserData())
+}
+
+// Seeding only ever creates users. It must never update the password of an already existing user.
 async function createUsers () {
   const users = await loadStaticUserData()
+  const seedSecrets = new Map(users.filter(user => user.passwordSecretName !== undefined).map(user => {
+    const seedSecret = getSeedSecret(user.key)
+    if (seedSecret === undefined) {
+      throw new Error(`Seed secret for user ${user.key} is not available`)
+    }
+    return [user.key, seedSecret] as const
+  }))
 
   await Promise.all(
-    users.map(async ({ username, email, password, customDomain, key, role, deletedFlag, profileImage, securityQuestion, feedback, address, card, totpSecret, passkeys, lastLoginIp = '' }) => {
+    users.map(async ({ username, email, password: staticPassword, customDomain, key, role, deletedFlag, profileImage, securityQuestion, feedback, address, card, totpSecret: staticTotpSecret, passkeys, lastLoginIp = '' }) => {
       try {
+        const seedSecret = seedSecrets.get(key)
+        const password = seedSecret?.password ?? staticPassword
+        const totpSecret = seedSecret?.totpSecret ?? staticTotpSecret
         const completeEmail = customDomain ? email : `${email}@${config.get<string>('application.domain')}`
         const user = await UserModel.create({
           username,

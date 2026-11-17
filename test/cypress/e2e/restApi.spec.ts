@@ -1,7 +1,7 @@
 describe('/api', () => {
   describe('challenge "restfulXssChallenge"', () => {
     beforeEach(() => {
-      cy.login({ email: 'admin', password: 'admin123' })
+      cy.loginAs('admin')
     })
 
     // Cypress alert bug
@@ -77,10 +77,7 @@ describe('/api', () => {
 describe('/rest/saveLoginIp', () => {
   describe('challenge "httpHeaderXssChallenge"', () => {
     beforeEach(() => {
-      cy.login({
-        email: 'admin',
-        password: 'admin123'
-      })
+      cy.loginAs('admin')
     })
 
     it('should be possible to save log-in IP when logged in', () => {

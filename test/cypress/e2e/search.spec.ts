@@ -51,10 +51,7 @@ describe('/rest/products/search', () => {
 
   describe('challenge "dlpPastebinLeakChallenge"', () => {
     beforeEach(() => {
-      cy.login({
-        email: 'admin',
-        password: 'admin123'
-      })
+      cy.loginAs('admin')
     })
 
     it('search query should logically reveal the special product', () => {
@@ -78,10 +75,7 @@ describe('/rest/products/search', () => {
 
   xdescribe('challenge "christmasSpecialChallenge"', () => {
     beforeEach(() => {
-      cy.login({
-        email: 'admin',
-        password: 'admin123'
-      })
+      cy.loginAs('admin')
     })
 
     it('search query should reveal logically deleted christmas special product on SQL injection attack', () => {

@@ -11,6 +11,7 @@ import config from 'config'
 import path from 'node:path'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { seedCredential } from '../helpers/seedCredentials'
 import { MemoryModel } from '../../models/memory'
 import * as db from '../../data/mongodb'
 
@@ -50,7 +51,7 @@ void describe('/rest/user/data-export', () => {
   })
 
   void it('Export data with empty JSON body but valid token still succeeds without CAPTCHA', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
 
     const res = await request(app)
@@ -70,7 +71,7 @@ void describe('/rest/user/data-export', () => {
   })
 
   void it('Export data without use of CAPTCHA', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
 
     const res = await request(app)
@@ -87,7 +88,7 @@ void describe('/rest/user/data-export', () => {
   })
 
   void it('Export data when CAPTCHA requested need right answer', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
 
     const captchaRes = await request(app)
@@ -107,7 +108,7 @@ void describe('/rest/user/data-export', () => {
   })
 
   void it('Export data using right answer to CAPTCHA', async () => {
-    const { token } = await login(app, { email: 'bjoern.kimminich@gmail.com', password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI=' })
+    const { token } = await login(app, seedCredential('bjoernGoogle'))
     const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
 
     const captchaRes = await request(app)
@@ -317,8 +318,7 @@ void describe('/rest/user/data-export', () => {
 
   void describe('error cases', () => {
     void it('should return 500 if MemoryModel.findAll fails', async (t) => {
-      const adminEmail = 'admin@' + config.get<string>('application.domain')
-      const { token } = await login(app, { email: adminEmail, password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
 
       const originalFindAll = MemoryModel.findAll
@@ -339,8 +339,7 @@ void describe('/rest/user/data-export', () => {
     })
 
     void it('should return 500 if ordersCollection.find fails', async (t) => {
-      const adminEmail = 'admin@' + config.get<string>('application.domain')
-      const { token } = await login(app, { email: adminEmail, password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       t.mock.method(db.ordersCollection, 'find', async () => { throw new Error('Orders error') })
 
@@ -354,8 +353,7 @@ void describe('/rest/user/data-export', () => {
     })
 
     void it('should return 500 if reviewsCollection.find fails', async (t) => {
-      const adminEmail = 'admin@' + config.get<string>('application.domain')
-      const { token } = await login(app, { email: adminEmail, password: 'admin123' })
+      const { token } = await login(app, seedCredential('admin'))
       const authHeader = { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }
       t.mock.method(db.reviewsCollection, 'find', async () => { throw new Error('Reviews error') })
 

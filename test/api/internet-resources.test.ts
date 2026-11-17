@@ -65,11 +65,11 @@ void describe('Required Internet resource', () => {
     assert.ok(body.includes('https://pastebin.com/90dUgd7s'))
   })
 
-  void it('PasteBin paste (https://pastebin.com/4U1V1UjU) for "Leaked Access Logs" challenge available', async () => {
+  void it('PasteBin paste (https://pastebin.com/4U1V1UjU) for "Leaked Access Logs" challenge available', { skip: 'Challenge is unavailable: it depends on a fixed admin credential that is not shipped anymore' }, async () => {
     const res = await fetch('https://pastebin.com/4U1V1UjU')
     const body = await res.text()
     assert.equal(res.status, 200)
-    assert.ok(body.includes('current=0Y8rMnww$*9VFYE%C2%A759-!Fg1L6t&amp;6lB'))
+    assert.ok(body.length > 0)
   })
 
   void it('StackOverflow question "Less verbose access logs using expressjs/morgan" with log snippet and PasteBin paste URL spoiler available', { skip: 'FIXME StackOverflow blocking with 403 error' }, async () => {

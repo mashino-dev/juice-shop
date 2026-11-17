@@ -245,6 +245,8 @@ jobs:
           npm install --global @angular/cli
       - name: "Install application"
         run: npm install
+      - name: "Generate random seed secrets for the application and the tests"
+        run: node --import tsx lib/scripts/generateTestSecrets.ts "$(mktemp -d)" >> "$GITHUB_ENV"
       - name: "Execute end-to-end tests"
         uses: cypress-io/github-action@c541a95ea92d9239347a2355f2e895cd4b3f8060 #v7.4.6
         with:
@@ -291,6 +293,8 @@ jobs:
           cd dist
           tar -zxf juice-shop-*.tgz
       - name: "Execute smoke test"
+        env:
+          NODE_CONFIG: '{"security":{"mode":"training"}}'
         run: |
           cd dist/juice-shop_*
           npm start &

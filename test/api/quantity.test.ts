@@ -10,6 +10,7 @@ import type { Express } from 'express'
 import config from 'config'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { seedCredential } from '../helpers/seedCredentials'
 
 let app: Express
 
@@ -32,10 +33,7 @@ void describe('/api/Quantitys', () => {
   })
 
   void it('GET quantity of all items for admin', async () => {
-    const { token } = await login(app, {
-      email: `admin@${config.get<string>('application.domain')}`,
-      password: 'admin123'
-    })
+    const { token } = await login(app, seedCredential('admin'))
     const res = await request(app)
       .get('/api/Quantitys')
       .set({ Authorization: `Bearer ${token}`, 'content-type': 'application/json' })
@@ -69,10 +67,7 @@ void describe('/api/Quantitys', () => {
   })
 
   void it('POST quantity forbidden for admin', async () => {
-    const { token } = await login(app, {
-      email: `admin@${config.get<string>('application.domain')}`,
-      password: 'admin123'
-    })
+    const { token } = await login(app, seedCredential('admin'))
     const res = await request(app)
       .post('/api/Quantitys')
       .set({ Authorization: `Bearer ${token}`, 'content-type': 'application/json' })
@@ -110,10 +105,7 @@ void describe('/api/Quantitys/:ids', () => {
   })
 
   void it('GET quantity of all items is forbidden for admin', async () => {
-    const { token } = await login(app, {
-      email: `admin@${config.get<string>('application.domain')}`,
-      password: 'admin123'
-    })
+    const { token } = await login(app, seedCredential('admin'))
     const res = await request(app)
       .get('/api/Quantitys/1')
       .set({ Authorization: `Bearer ${token}`, 'content-type': 'application/json' })
@@ -214,10 +206,7 @@ void describe('/api/Quantitys/:ids', () => {
   })
 
   void it('DELETE quantity is forbidden for admin', async () => {
-    const { token } = await login(app, {
-      email: `admin@${config.get<string>('application.domain')}`,
-      password: 'admin123'
-    })
+    const { token } = await login(app, seedCredential('admin'))
     const res = await request(app)
       .delete('/api/Quantitys/1')
       .set({ Authorization: `Bearer ${token}`, 'content-type': 'application/json' })

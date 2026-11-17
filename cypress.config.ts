@@ -5,6 +5,7 @@ import type { Memory as MemoryConfig, Product as ProductConfig } from './lib/con
 import * as utils from './lib/utils'
 import { generateSync } from 'otplib'
 import { buildAssertion, buildAttestation, loadVictimCredential } from './test/api/helpers/passkey'
+import { isSeedAccount, seedCredential } from './test/helpers/seedCredentials'
 
 export default defineConfig({
   projectId: '3hrkhu',
@@ -61,6 +62,12 @@ export default defineConfig({
               return i + 1
             }
           }
+        },
+        GetSeedCredential (account: string) {
+          if (!isSeedAccount(account)) {
+            throw new Error(`Unknown seed account: ${account}`)
+          }
+          return seedCredential(account)
         },
         GenerateAuthenticator (inputString: string) {
           return generateSync({ secret: inputString })

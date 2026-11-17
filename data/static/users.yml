@@ -1,11 +1,8 @@
 -
   email: admin
-  password: 'admin123'
+  passwordSecretName: ADMIN_INITIAL_PASSWORD
   key: admin
   role: 'admin'
-  securityQuestion:
-    id: 2
-    answer: '@xI98PxDO+06!'
   feedback:
     comment: 'I love this shop! Best products in town! Highly recommended!'
     rating: 5
@@ -85,7 +82,7 @@
 -
   email: bjoern.kimminich@gmail.com
   username: bkimminich
-  password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
+  passwordSecretName: BJOERN_GOOGLE_INITIAL_PASSWORD
   customDomain: true
   key: bjoernGoogle
   role: 'admin'
@@ -112,12 +109,9 @@
     answer: 'Brd?j8sEMziOvvBf§Be?jFZ77H?hgm'
 -
   email: support
-  password: 'J6aVjTgOpRs@?5l!Zkq2AYnCE@RF$P'
+  passwordSecretName: SUPPORT_INITIAL_PASSWORD
   key: support
   role: 'admin'
-  securityQuestion:
-    id: 10
-    answer: 'SC OLEA SRL' # http://www.olea.com.ro/
 -
   email: morty
   password: 'focusOnScienceMorty!focusOnScience'
@@ -138,22 +132,16 @@
     answer: 'I even shared my pizza bagels with you!'
 -
   email: J12934
-  password: '0Y8rMnww$*9VFYE§59-!Fg1L6t&6lB'
+  passwordSecretName: JANNIK_INITIAL_PASSWORD
   key: jannik
   role: 'admin'
-  securityQuestion:
-    id: 1
-    answer: 'azjTLprq2im6p86RbFrA41L'
 -
   email: wurstbrot
   username: wurstbrot
-  password: 'EinBelegtesBrotMitSchinkenSCHINKEN!'
-  totpSecret: IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH
+  passwordSecretName: TIMO_INITIAL_PASSWORD
+  totpSecretName: TIMO_TOTP_SECRET
   key: timo
   role: 'admin'
-  securityQuestion:
-    id: 1
-    answer: 'NZMJLjEinU7TFElDIYW8'
 -
   email: amy
   password: 'K1f.....................'
@@ -165,14 +153,11 @@
     answer: 'Dr. Dr. Dr. Dr. Zoidberg'
 -
   email: bjoern
-  password: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase'
+  passwordSecretName: BJOERN_INITIAL_PASSWORD
   key: bjoern
   profileImage: '12.png'
   role: 'admin'
   isAdmin: true
-  securityQuestion:
-    id: 9
-    answer: 'West-2082' # http://www.alte-postleitzahlen.de/uetersen
 -
   email: bjoern@owasp.org
   password: 'kitten lesser pooch karate buffoon indoors'
@@ -269,18 +254,15 @@
     answer: "Used Emporium"
 -
   email: testing
-  password: 'IamUsedForTesting'
+  passwordSecretName: TESTING_INITIAL_PASSWORD
   key: LetUsTest
   role: 'admin'
 -
   email: cloud-admin
-  password: 'DVKH3gn7G$2Rk!f5Tz@9Lm&Qp4Wx#Yj8Bc0Ns6Ue1Io7Ah2Sd4Fg6Hj8Kl0Zx3Cv5Bn7Mq9Wr1Et3Yu5Ip'
+  passwordSecretName: CLOUD_ADMIN_INITIAL_PASSWORD
   key: cloudAdmin
   role: 'admin'
   profileImage: 'default.svg'
-  securityQuestion:
-    id: 10
-    answer: 'xK9#mP2$vL5nQ8wR3jF6hT0yB7cA4dG1eU'
 -
   email: basil
   password: 'my little nest of vipers'

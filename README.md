@@ -42,6 +42,7 @@ For a detailed introduction, full list of features and architecture overview ple
     - [Packaged Distributions](#packaged-distributions)
     - [Docker Container](#docker-container)
     - [Vagrant](#vagrant)
+    - [Seed secrets and security mode](#seed-secrets-and-security-mode)
 - [Demo](#demo)
 - [Documentation](#documentation)
     - [Node.js version compatibility](#nodejs-version-compatibility)
@@ -118,6 +119,47 @@ For a detailed introduction, full list of features and architecture overview ple
    of the repository)
 3. Run `cd vagrant && vagrant up`
 4. Browse to [192.168.56.110](http://192.168.56.110)
+
+### Seed secrets and security mode
+
+This fork starts in the `hardened` security mode (`security.mode` in `config/default.yml`). The seeded accounts with
+admin privileges do not have a fixed password, fixed security answer or fixed TOTP secret anymore. The passwords are
+supplied when the application starts and are never stored in the repository:
+
+| Seed account | Secret (as `NAME` or `NAME_FILE`) | In `hardened` mode |
+|--------------|-----------------------------------|--------------------|
+| admin | `ADMIN_INITIAL_PASSWORD` | **required**, startup is aborted without it |
+| bjoernGoogle | `BJOERN_GOOGLE_INITIAL_PASSWORD` | optional |
+| support | `SUPPORT_INITIAL_PASSWORD` | optional |
+| jannik | `JANNIK_INITIAL_PASSWORD` | optional |
+| timo (wurstbrot) | `TIMO_INITIAL_PASSWORD`, `TIMO_TOTP_SECRET` (Base32) | optional |
+| bjoern | `BJOERN_INITIAL_PASSWORD` | optional |
+| LetUsTest (testing) | `TESTING_INITIAL_PASSWORD` | optional |
+| cloudAdmin | `CLOUD_ADMIN_INITIAL_PASSWORD` | optional |
+
+- Prefer `NAME_FILE` (for example a Docker secret mounted below `/run/secrets`). Setting `NAME` as environment variable
+  works as well. Setting both for the same secret aborts the startup.
+- A secret must have 16 to 256 characters (at least 8 different ones) and must not contain the account name. Empty, too
+  short or otherwise unsuitable values abort the startup. The error names the variable but never shows a value.
+- An optional secret that is not supplied is replaced by a cryptographically random value, which makes the account
+  impossible to log in with. A random TOTP secret is generated for timo in the same way.
+- The secrets can be injected by the deployment, e.g. from AWS Secrets Manager or SSM Parameter Store via the ECS/EKS
+  secret integration, as environment variables or as files.
+- The seeding only ever creates users. It never overwrites the password of an existing user.
+
+```sh
+ADMIN_INITIAL_PASSWORD_FILE=/run/secrets/juice_shop_admin npm start
+docker run --rm -p 127.0.0.1:3000:3000 -v /path/to/secret:/run/secrets/admin:ro \
+  -e ADMIN_INITIAL_PASSWORD_FILE=/run/secrets/admin bkimminich/juice-shop
+```
+
+For local experiments without secrets, use the `training` mode: `NODE_CONFIG='{"security":{"mode":"training"}}' npm start`.
+All admin accounts are then locked with random values. The fixed credentials of the original Juice Shop are **not**
+restored in this mode. The challenges that depend on them (_Password Strength_, _Login Support Team_,
+_Leaked Access Logs_, _Login Bjoern_, _Exposed Credentials_ and _Reset Bjoern's Password_) are shown as unavailable.
+
+The tests generate random secrets for every run (see `test/api/helpers/test-env.mjs` and
+`lib/scripts/generateTestSecrets.ts` for the end-to-end tests).
 
 ## Demo
 

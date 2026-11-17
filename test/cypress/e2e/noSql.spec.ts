@@ -5,7 +5,7 @@ describe('/rest/products/reviews', () => {
 
   describe('challenge "noSqlCommandChallenge"', () => {
     beforeEach(() => {
-      cy.login({ email: 'admin', password: 'admin123' })
+      cy.loginAs('admin')
     })
     it('should be possible to inject a command into the get route', () => {
       cy.task('isDocker').then((isDocker) => {
@@ -50,7 +50,7 @@ describe('/rest/products/reviews', () => {
 
   describe('challenge "noSqlReviewsChallenge"', () => {
     beforeEach(() => {
-      cy.login({ email: 'admin', password: 'admin123' })
+      cy.loginAs('admin')
     })
 
     it('should be possible to inject a selector into the update route', () => {

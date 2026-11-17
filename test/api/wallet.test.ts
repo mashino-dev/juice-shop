@@ -7,8 +7,11 @@ import { describe, it, before } from 'node:test'
 import assert from 'node:assert/strict'
 import request from 'supertest'
 import type { Express } from 'express'
+import { Op } from 'sequelize'
 import { createTestApp } from './helpers/setup'
 import { WalletModel } from '../../models/wallet'
+import { CardModel } from '../../models/card'
+import { UserModel } from '../../models/user'
 import { login } from './helpers/auth'
 
 let app: Express
@@ -45,10 +48,13 @@ void describe('/api/Wallets', () => {
   })
 
   void it('PUT charge wallet from credit card of requesting user', async () => {
+    const demo = await UserModel.findOne({ where: { email: 'demo' } })
+    const ownCard = await CardModel.findOne({ where: { UserId: demo?.id } })
+    assert.ok(ownCard)
     const res = await request(app)
       .put('/rest/wallet/balance')
       .set(authHeader)
-      .send({ balance: 10, paymentId: 2 })
+      .send({ balance: 10, paymentId: ownCard.id })
     assert.equal(res.status, 200)
 
     const balanceRes = await request(app)
@@ -60,10 +66,13 @@ void describe('/api/Wallets', () => {
   })
 
   void it('PUT charge wallet from foreign credit card is forbidden', async () => {
+    const demo = await UserModel.findOne({ where: { email: 'demo' } })
+    const foreignCard = await CardModel.findOne({ where: { UserId: { [Op.ne]: demo?.id } } })
+    assert.ok(foreignCard)
     const res = await request(app)
       .put('/rest/wallet/balance')
       .set(authHeader)
-      .send({ balance: 10, paymentId: 1 })
+      .send({ balance: 10, paymentId: foreignCard.id })
     assert.equal(res.status, 402)
   })
 

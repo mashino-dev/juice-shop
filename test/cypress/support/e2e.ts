@@ -11,6 +11,7 @@ declare global {
         password: string
         totpSecret?: string
       }) => void
+      loginAs: (account: string) => void
       eachSeries: any
     }
   }

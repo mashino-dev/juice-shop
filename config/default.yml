@@ -2,6 +2,8 @@ server:
   port: 3000
   basePath: ''
   baseUrl: 'http://localhost:3000' # used for CSAF, e.g. https://example.com
+security:
+  mode: hardened # Options: hardened training. 'hardened' refuses to start without the required seed secrets (e.g. ADMIN_INITIAL_PASSWORD)
 application:
   domain: juice-sh.op # for pre-loaded email users
   name: 'OWASP Juice Shop'

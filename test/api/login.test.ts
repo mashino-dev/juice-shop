@@ -9,6 +9,7 @@ import request from 'supertest'
 import type { Express } from 'express'
 import config from 'config'
 import { createTestApp } from './helpers/setup'
+import { seedCredential } from '../helpers/seedCredentials'
 
 let app: Express
 
@@ -71,10 +72,7 @@ void describe('/rest/user/login', () => {
     const res = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'admin@' + config.get<string>('application.domain'),
-        password: 'admin123'
-      })
+      .send(seedCredential('admin'))
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
@@ -85,10 +83,7 @@ void describe('/rest/user/login', () => {
     const res = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'support@' + config.get<string>('application.domain'),
-        password: 'J6aVjTgOpRs@?5l!Zkq2AYnCE@RF$P'
-      })
+      .send(seedCredential('support'))
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
@@ -124,13 +119,11 @@ void describe('/rest/user/login', () => {
   })
 
   void it('POST login with wurstbrot credentials expects 2FA token', async () => {
+    const { email, password } = seedCredential('timo')
     const res = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'wurstbrot@' + config.get<string>('application.domain'),
-        password: 'EinBelegtesBrotMitSchinkenSCHINKEN!'
-      })
+      .send({ email, password })
 
     assert.equal(res.status, 401)
     assert.ok(res.headers['content-type']?.includes('application/json'))
@@ -142,10 +135,7 @@ void describe('/rest/user/login', () => {
     const res = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern.kimminich@gmail.com',
-        password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
-      })
+      .send(seedCredential('bjoernGoogle'))
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('application/json'))
@@ -240,10 +230,7 @@ void describe('/rest/saveLoginIp', () => {
     const loginRes = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern.kimminich@gmail.com',
-        password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
-      })
+      .send(seedCredential('bjoernGoogle'))
 
     assert.equal(loginRes.status, 200)
 
@@ -262,10 +249,7 @@ void describe('/rest/saveLoginIp', () => {
     const loginRes = await request(app)
       .post('/rest/user/login')
       .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern.kimminich@gmail.com',
-        password: 'bW9jLmxpYW1nQGhjaW5pbW1pay5ucmVvamI='
-      })
+      .send(seedCredential('bjoernGoogle'))
 
     assert.equal(loginRes.status, 200)
 

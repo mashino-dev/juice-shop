@@ -78,6 +78,10 @@ export const ServerSchema = z.object({
   baseUrl: z.string()
 })
 
+export const SecuritySchema = z.object({
+  mode: z.enum(['hardened', 'training'])
+})
+
 export const ApplicationSchema = z.object({
   domain: z.string(),
   name: z.string(),
@@ -182,6 +186,7 @@ export const CtfSchema = z.object({
 
 export const AppConfigSchema = z.object({
   server: ServerSchema,
+  security: SecuritySchema,
   application: ApplicationSchema,
   challenges: ChallengesSchema,
   hackingInstructor: HackingInstructorSchema,
@@ -209,6 +214,7 @@ const dropNulls = (value: unknown): unknown => {
 // Deep-partial schema for validating possibly-incomplete individual YAML config files.
 export const ValidationSchema = z.preprocess(dropNulls, z.object({
   server: ServerSchema.partial().optional(),
+  security: SecuritySchema.partial().optional(),
   application: ApplicationSchema.partial().extend({
     chatBot: ChatBotSchema.partial().optional(),
     social: SocialSchema.partial().optional(),
@@ -228,6 +234,7 @@ export const ValidationSchema = z.preprocess(dropNulls, z.object({
 }))
 
 export type ServerConfig = z.infer<typeof ServerSchema>
+export type SecurityConfig = z.infer<typeof SecuritySchema>
 export type ApplicationConfig = z.infer<typeof ApplicationSchema>
 export type ChallengesConfig = z.infer<typeof ChallengesSchema>
 export type HackingInstructorConfig = z.infer<typeof HackingInstructorSchema>

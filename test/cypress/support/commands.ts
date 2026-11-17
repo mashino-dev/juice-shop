@@ -43,13 +43,13 @@ Cypress.Commands.add(
         }
       )
     }
-    cy.get('#password').type(context.password)
+    cy.get('#password').type(context.password, { log: false })
     cy.get('#loginButton').click()
     if (context.totpSecret) {
       cy.location('hash').should('include', '/2fa/enter')
-      cy.task<string>('GenerateAuthenticator', context.totpSecret).then(
+      cy.task<string>('GenerateAuthenticator', context.totpSecret, { log: false }).then(
         (totpToken: string) => {
-          cy.get('#totpToken').type(totpToken)
+          cy.get('#totpToken').type(totpToken, { log: false })
           cy.get('#totpSubmitButton').click()
         }
       )
@@ -61,6 +61,18 @@ Cypress.Commands.add(
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       expect(cookie?.value).to.be.ok
     })
+  }
+)
+
+// Logs in as one of the seeded admin accounts using the secrets this test run supplied to the application
+Cypress.Commands.add(
+  'loginAs',
+  (account: string) => {
+    cy.task<{ email: string, password: string, totpSecret?: string }>('GetSeedCredential', account, { log: false }).then(
+      (credential) => {
+        cy.login(credential)
+      }
+    )
   }
 )
 

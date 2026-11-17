@@ -8,7 +8,17 @@ async function app () {
   await validateDependencies()
 
   const server = await import('./server')
-  await server.start()
+  try {
+    await server.start()
+  } catch (err) {
+    const { SeedSecretError } = await import('./lib/startup/seedSecrets')
+    if (err instanceof SeedSecretError) {
+      const { default: logger } = await import('./lib/logger')
+      logger.error(`${err.message}. Provide the secrets via <NAME> or <NAME>_FILE, or set security.mode to "training". Exiting.`)
+      process.exit(1)
+    }
+    throw err
+  }
 }
 
 app()
