@@ -31,6 +31,7 @@ export function login () {
           res.status(401).send(res.__('Invalid email or password.'))
         }
       }).catch((error: Error) => {
-        next(error)
+        logger.error(`Login query failed: ${error.name}`)
+        res.status(500).json({ error: 'Internal Server Error' })
       })
   }

@@ -38,6 +38,24 @@ void describe('/api/Challenges', () => {
     }
   })
 
+  void it('GET all challenges lists SQL Injection dependent challenges as unavailable on Hardened and outside the tutorial mode', async () => {
+    const res = await request(app)
+      .get('/api/Challenges')
+    assert.equal(res.status, 200)
+    const byKey = (key: string) => res.body.data.find((item: any) => item.key === key)
+
+    for (const key of ['loginAdminChallenge', 'loginBenderChallenge', 'loginJimChallenge', 'ghostLoginChallenge', 'ephemeralAccountantChallenge', 'unionSqlInjectionChallenge', 'dbSchemaChallenge', 'twoFactorAuthUnsafeSecretStorageChallenge']) {
+      assert.equal(byKey(key)?.disabledEnv, 'Hardened')
+      assert.equal(byKey(key)?.solved, false)
+    }
+    for (const key of ['loginAdminChallenge', 'loginBenderChallenge', 'loginJimChallenge']) {
+      assert.equal(byKey(key).tutorialOrder, null)
+    }
+    for (const key of ['christmasSpecialChallenge', 'dlpPastebinDataLeakChallenge']) {
+      assert.equal(byKey(key)?.disabledEnv, null)
+    }
+  })
+
   void it('POST new challenge is forbidden via public API even when authenticated', async () => {
     const res = await request(app)
       .post('/api/Challenges')

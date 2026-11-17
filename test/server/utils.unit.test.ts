@@ -193,6 +193,14 @@ void describe('utils', () => {
       })
     }
 
+    for (const safetyMode of ['enabled', 'disabled', 'auto'] as const) {
+      void it(`challenges with disabledEnv Hardened are unconditionally disabled with safetyMode set to ${safetyMode}`, () => {
+        const challenge: ChallengeModel = { disabledEnv: 'Hardened' } as unknown as ChallengeModel
+
+        assert.deepEqual(utils.getChallengeEnablementStatus(challenge, safetyMode, defaultIsEnvironmentFunctions), { enabled: false, disabledBecause: 'Hardened' })
+      })
+    }
+
     const testCases = [
       { name: 'Docker', environmentFunction: 'isDocker' },
       { name: 'Heroku', environmentFunction: 'isHeroku' },

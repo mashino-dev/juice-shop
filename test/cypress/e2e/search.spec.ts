@@ -31,22 +31,20 @@ describe('/#/search', () => {
 })
 
 describe('/rest/products/search', () => {
-  describe('challenge "unionSqlInjectionChallenge"', () => {
-    it('query param in product search endpoint should be susceptible to UNION SQL injection attacks', () => {
-      cy.request(
-        "/rest/products/search?q=')) union select id,'2','3',email,password,'6','7','8','9','10' from users--"
-      )
-      cy.expectChallengeSolved({ challenge: 'User Credentials' })
-    })
-  })
-
-  describe('challenge "dbSchemaChallenge"', () => {
-    it('query param in product search endpoint should be susceptible to UNION SQL injection attacks', () => {
-      cy.request(
-        "/rest/products/search?q=')) union select sql,'2','3','4','5','6','7','8','9','10' from sqlite_master--"
-      )
-      cy.expectChallengeSolved({ challenge: 'Database Schema' })
-    })
+  describe('SQL Injection payloads in the query param (formerly "unionSqlInjectionChallenge" and "dbSchemaChallenge")', () => {
+    const payloads = [
+      "')) union select id,'2','3',email,password,'6','7','8','9','10' from users--",
+      "')) union select sql,'2','3','4','5','6','7','8','9','10' from sqlite_master--"
+    ]
+    for (const payload of payloads) {
+      it('should treat the payload as plain search text and not return other tables or schema information', () => {
+        cy.request({ url: '/rest/products/search', qs: { q: payload } }).then((response) => {
+          expect(response.status).to.equal(200)
+          expect(response.body.data).to.have.length(0)
+          expect(JSON.stringify(response.body)).not.to.match(/CREATE TABLE|sqlite_master|"password"/)
+        })
+      })
+    }
   })
 
   describe('challenge "dlpPastebinLeakChallenge"', () => {
@@ -57,8 +55,8 @@ describe('/rest/products/search', () => {
       })
     })
 
-    it('search query should logically reveal the special product', () => {
-      cy.request("/rest/products/search?q='))--")
+    it('search query with SQL comment characters should not reveal the logically deleted special product', () => {
+      cy.request({ url: '/rest/products/search', qs: { q: "'))--" } })
         .its('body')
         .then((sourceContent) => {
           cy.task<Product>('GetPastebinLeakProduct').then((pastebinLeakProduct: Product) => {
@@ -70,7 +68,7 @@ describe('/rest/products/search', () => {
               }
             })
             // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            expect(foundProduct).to.be.true
+            expect(foundProduct).to.be.false
           })
         })
     })
@@ -84,8 +82,8 @@ describe('/rest/products/search', () => {
       })
     })
 
-    it('search query should reveal logically deleted christmas special product on SQL injection attack', () => {
-      cy.request("/rest/products/search?q='))--")
+    it('search query with SQL comment characters should not reveal the logically deleted christmas special product', () => {
+      cy.request({ url: '/rest/products/search', qs: { q: "'))--" } })
         .its('body')
         .then((sourceContent) => {
           cy.task<Product>('GetChristmasProduct').then((christmasProduct: Product) => {
@@ -97,7 +95,7 @@ describe('/rest/products/search', () => {
               }
             })
             // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            expect(foundProduct).to.be.true
+            expect(foundProduct).to.be.false
           })
         })
     })

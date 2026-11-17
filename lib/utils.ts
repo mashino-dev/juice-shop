@@ -199,6 +199,10 @@ export function getChallengeEnablementStatus (challenge: Challenge,
     return { enabled: true, disabledBecause: null }
   }
 
+  if (challenge.disabledEnv.includes('Hardened')) {
+    return { enabled: false, disabledBecause: 'Hardened' }
+  }
+
   if (safetyModeSetting === 'disabled') {
     return { enabled: true, disabledBecause: null }
   }
