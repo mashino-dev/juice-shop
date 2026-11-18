@@ -10,6 +10,7 @@ import type { Express } from 'express'
 import config from 'config'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
+import { challenges } from '../../data/datacache'
 
 let app: Express
 
@@ -103,78 +104,30 @@ void describe('/rest/user/change-password', () => {
   })
 })
 
-void describe('/rest/user/reset-password', () => {
-  void it('POST password reset for Jim with correct answer to his security question', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'jim@' + config.get<string>('application.domain'),
-        answer: 'Samuel',
-        new: 'ncc-1701',
-        repeat: 'ncc-1701'
-      })
+void describe('/rest/user/reset-password (security answer based Forgot Password is unavailable on Hardened)', () => {
+  const resetAttempts: Array<{ name: string, email: string, answer: string, challenge: keyof typeof challenges }> = [
+    { name: 'Jim', email: 'jim@' + config.get<string>('application.domain'), answer: 'Samuel', challenge: 'resetPasswordJimChallenge' },
+    { name: 'Bender', email: 'bender@' + config.get<string>('application.domain'), answer: 'Stop\'n\'Drop', challenge: 'resetPasswordBenderChallenge' },
+    { name: 'Bjoern\u00b4s internal account', email: 'bjoern@' + config.get<string>('application.domain'), answer: 'West-2082', challenge: 'resetPasswordBjoernChallenge' },
+    { name: 'Bjoern\u00b4s OWASP account', email: 'bjoern@owasp.org', answer: 'Zaya', challenge: 'resetPasswordBjoernOwaspChallenge' },
+    { name: 'Morty', email: 'morty@' + config.get<string>('application.domain'), answer: '5N0wb41L', challenge: 'resetPasswordMortyChallenge' },
+    { name: 'Uvogin', email: 'uvogin@' + config.get<string>('application.domain'), answer: 'Silence of the Lambs', challenge: 'resetPasswordUvoginChallenge' }
+  ]
 
-    assert.equal(res.status, 200)
-  })
+  for (const { name, email, answer, challenge } of resetAttempts) {
+    void it(`POST password reset for ${name} with the correct answer is refused and solves nothing`, async () => {
+      const res = await request(app)
+        .post('/rest/user/reset-password')
+        .set({ 'content-type': 'application/json' })
+        .send({ email, answer, new: 'not-going-to-be-set', repeat: 'not-going-to-be-set' })
 
-  void it('POST password reset for Bender with correct answer to his security question', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bender@' + config.get<string>('application.domain'),
-        answer: 'Stop\'n\'Drop',
-        new: 'OhG0dPlease1nsertLiquor!',
-        repeat: 'OhG0dPlease1nsertLiquor!'
-      })
+      assert.equal(res.status, 404)
+      assert.equal(res.body.user, undefined)
+      assert.equal(challenges[challenge].solved, false)
+    })
+  }
 
-    assert.equal(res.status, 200)
-  })
-
-  void it('POST password reset for Bjoern\u00b4s internal account with correct answer to his security question', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern@' + config.get<string>('application.domain'),
-        answer: 'West-2082',
-        new: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase',
-        repeat: 'monkey summer birthday are all bad passwords but work just fine in a long passphrase'
-      })
-
-    assert.equal(res.status, 200)
-  })
-
-  void it('POST password reset for Bjoern\u00b4s OWASP account with correct answer to his security question', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern@owasp.org',
-        answer: 'Zaya',
-        new: 'kitten lesser pooch karate buffoon indoors',
-        repeat: 'kitten lesser pooch karate buffoon indoors'
-      })
-
-    assert.equal(res.status, 200)
-  })
-
-  void it('POST password reset for Morty with correct answer to his security question', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'morty@' + config.get<string>('application.domain'),
-        answer: '5N0wb41L',
-        new: 'iBurri3dMySe1fInTheB4ckyard!',
-        repeat: 'iBurri3dMySe1fInTheB4ckyard!'
-      })
-
-    assert.equal(res.status, 200)
-  })
-
-  void it('POST password reset with wrong answer to security question', async () => {
+  void it('POST password reset with wrong answer gets the same refusal as a correct answer', async () => {
     const res = await request(app)
       .post('/rest/user/reset-password')
       .set({ 'content-type': 'application/json' })
@@ -185,78 +138,16 @@ void describe('/rest/user/reset-password', () => {
         repeat: '12345'
       })
 
-    assert.equal(res.status, 401)
-    assert.ok(res.text.includes('Wrong answer to security question.'))
+    assert.equal(res.status, 404)
+    assert.ok(res.text.includes('not available'))
   })
 
-  void it('POST password reset without any data is blocked', async () => {
+  void it('POST password reset without any data gets the same refusal instead of an error page', async () => {
     const res = await request(app)
       .post('/rest/user/reset-password')
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
-  })
-
-  void it('POST password reset without new password throws a 401 error', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern@' + config.get<string>('application.domain'),
-        answer: 'W-2082',
-        repeat: '12345'
-      })
-
-    assert.equal(res.status, 401)
-    assert.ok(res.text.includes('Password cannot be empty.'))
-  })
-
-  void it('POST password reset with mismatching passwords throws a 401 error', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern@' + config.get<string>('application.domain'),
-        answer: 'W-2082',
-        new: '12345',
-        repeat: '1234_'
-      })
-
-    assert.equal(res.status, 401)
-    assert.ok(res.text.includes('New and repeated password do not match.'))
-  })
-
-  void it('POST password reset with no email address throws a 412 error', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        answer: 'W-2082',
-        new: 'abcdef',
-        repeat: 'abcdef'
-      })
-
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
-  })
-
-  void it('POST password reset with no answer to the security question throws a 412 error', async () => {
-    const res = await request(app)
-      .post('/rest/user/reset-password')
-      .set({ 'content-type': 'application/json' })
-      .send({
-        email: 'bjoern@' + config.get<string>('application.domain'),
-        new: 'abcdef',
-        repeat: 'abcdef'
-      })
-
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('<h1>' + config.get<string>('application.name') + ' (Express'))
-    assert.ok(res.text.includes('Error: Blocked illegal activity'))
+    assert.equal(res.status, 404)
+    assert.ok(res.text.includes('not available'))
+    assert.ok(!res.text.includes('Blocked illegal activity'))
   })
 })

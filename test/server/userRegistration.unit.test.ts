@@ -7,7 +7,7 @@ import { describe, it, beforeEach, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { challenges } from '../../data/datacache'
 import type { Challenge } from '@juice-shop/data/types'
-import { registrationFields, restrictRegistrationFields } from '../../routes/userRegistration'
+import { extractRegistrationSecurityAnswer, registrationFields, restrictRegistrationFields, storeRegistrationSecurityAnswer } from '../../routes/userRegistration'
 import * as verify from '../../routes/verify'
 
 void describe('userRegistration', () => {
@@ -104,6 +104,47 @@ void describe('userRegistration', () => {
     void it('Empty User Registration is still solved by empty email and password', () => {
       chain({ email: '', password: '', passwordRepeat: '' })
       assert.equal(challenges.emptyUserRegistration.solved, true)
+    })
+  })
+
+  void describe('security answer submitted with the registration', () => {
+    void it('is extracted from a positive integer question id and a non-empty answer', () => {
+      assert.deepEqual(
+        extractRegistrationSecurityAnswer({ securityQuestion: { id: 3, question: 'Q?' }, securityAnswer: 'A' }),
+        { SecurityQuestionId: 3, answer: 'A' })
+    })
+
+    for (const [name, body] of [
+      ['no question and answer', {}],
+      ['null question and answer', { securityQuestion: null, securityAnswer: null }],
+      ['an answer without question', { securityAnswer: 'A' }],
+      ['a question without answer', { securityQuestion: { id: 1 } }],
+      ['an empty answer', { securityQuestion: { id: 1 }, securityAnswer: '' }],
+      ['a non-string answer', { securityQuestion: { id: 1 }, securityAnswer: ['A'] }],
+      ['a string question id', { securityQuestion: { id: '1' }, securityAnswer: 'A' }],
+      ['a fractional question id', { securityQuestion: { id: 1.5 }, securityAnswer: 'A' }],
+      ['a zero question id', { securityQuestion: { id: 0 }, securityAnswer: 'A' }],
+      ['a negative question id', { securityQuestion: { id: -1 }, securityAnswer: 'A' }],
+      ['a question that is not an object', { securityQuestion: 1, securityAnswer: 'A' }],
+      ['inherited properties only', Object.create({ securityQuestion: { id: 1 }, securityAnswer: 'A' })]
+    ] as Array<[string, Record<string, unknown>]>) {
+      void it(`is not extracted for ${name}`, () => {
+        assert.equal(extractRegistrationSecurityAnswer(body), undefined)
+      })
+    }
+
+    void it('never takes a UserId from the payload and is not part of the body that reaches the model', () => {
+      const req: any = { body: { email: 'a@b.c', password: 'secret', UserId: 99, securityQuestion: { id: 1, UserId: 98 }, securityAnswer: 'A' } }
+      restrictRegistrationFields()(req, res, next)
+      assert.deepEqual(req.body, { email: 'a@b.c', password: 'secret', role: 'customer' })
+      assert.deepEqual(extractRegistrationSecurityAnswer({ securityQuestion: { id: 1, UserId: 98 }, securityAnswer: 'A' }), { SecurityQuestionId: 1, answer: 'A' })
+    })
+
+    void it('is not stored by the finale hook for a request that did not submit one', async () => {
+      const context: any = { instance: { id: 1 }, continue: 'continue', error: mock.fn() }
+      const result = await storeRegistrationSecurityAnswer()({} as any, res, context)
+      assert.equal(result, 'continue')
+      assert.equal(context.error.mock.callCount(), 0)
     })
   })
 })

@@ -92,7 +92,6 @@ import { getLanguageList } from './routes/languages'
 import { getTagGroups } from './routes/tags'
 import { getUserProfile } from './routes/userProfile'
 import { serveAngularClient } from './routes/angular'
-import { resetPassword } from './routes/resetPassword'
 import { serveLogFiles } from './routes/logfileServer'
 import { servePublicFiles } from './routes/fileServer'
 import { addMemory, getMemories } from './routes/memory'
@@ -104,8 +103,8 @@ import * as restoreProgress from './routes/restoreProgress'
 import { checkKeys, nftUnlocked } from './routes/checkKeys'
 import { retrieveLoggedInUser } from './routes/currentUser'
 import authenticatedUsers from './routes/authenticatedUsers'
-import { restrictRegistrationFields } from './routes/userRegistration'
-import { securityQuestion } from './routes/securityQuestion'
+import { restrictRegistrationFields, storeRegistrationSecurityAnswer } from './routes/userRegistration'
+import { passwordRecoveryUnavailable } from './routes/passwordRecoveryUnavailable'
 import { servePremiumContent } from './routes/premiumReward'
 import { contractExploitListener } from './routes/web3Wallet'
 import { updateUserProfile } from './routes/updateUserProfile'
@@ -517,6 +516,9 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   /* Verifying DB related challenges can be postponed until the next request for challenges is coming via finale */
   app.use(verify.databaseRelatedChallenges())
 
+  /* Security answers are only created server-side during registration, never via the public API */
+  app.post('/api/SecurityAnswers', security.denyAll())
+
   // vuln-code-snippet start registerAdminChallenge
   /* Generated API endpoints */
   finale.initialize({ app, sequelize: seq })
@@ -555,6 +557,7 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
         })
         return context.continue // vuln-code-snippet neutral-line registerAdminChallenge
       }) // vuln-code-snippet neutral-line registerAdminChallenge
+      resource.create.write.after(storeRegistrationSecurityAnswer()) // vuln-code-snippet hide-line
     } // vuln-code-snippet neutral-line registerAdminChallenge
     // vuln-code-snippet end registerAdminChallenge
 
@@ -636,8 +639,9 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
   /* Custom Restful API */
   app.post('/rest/user/login', login())
   app.get('/rest/user/change-password', utils.asyncHandler(changePassword()))
-  app.post('/rest/user/reset-password', utils.asyncHandler(resetPassword()))
-  app.get('/rest/user/security-question', utils.asyncHandler(securityQuestion()))
+  /* Security answer based Forgot Password is unavailable (Hardened): neither changes a password nor discloses anything */
+  app.post('/rest/user/reset-password', passwordRecoveryUnavailable())
+  app.get('/rest/user/security-question', passwordRecoveryUnavailable())
   app.get('/rest/user/whoami', utils.asyncHandler(retrieveLoggedInUser()))
   app.get('/rest/user/authentication-details', utils.asyncHandler(authenticatedUsers()))
   app.get('/rest/products/search', utils.asyncHandler(searchProducts()))

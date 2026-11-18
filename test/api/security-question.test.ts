@@ -70,37 +70,39 @@ void describe('/api/SecurityQuestions/:id', () => {
   })
 })
 
-void describe('/rest/user/security-question', () => {
-  void it('GET security question for an existing user\'s email address', async () => {
+void describe('/rest/user/security-question (unavailable on Hardened, never discloses anything)', () => {
+  void it('GET for an existing user\'s email address returns the fixed refusal without a question', async () => {
     const res = await request(app)
       .get(`/rest/user/security-question?email=jim@${config.get<string>('application.domain')}`)
 
-    assert.equal(res.status, 200)
-    assert.equal(res.body.question.question, 'Your eldest siblings middle name?')
+    assert.equal(res.status, 404)
+    assert.equal(res.body.question, undefined)
+    assert.ok(!res.text.includes('siblings'))
   })
 
-  void it('GET security question returns nothing for an unknown email address', async () => {
-    const res = await request(app)
+  void it('GET for an unknown email address returns the same response as for an existing one', async () => {
+    const existing = await request(app)
+      .get(`/rest/user/security-question?email=jim@${config.get<string>('application.domain')}`)
+    const unknown = await request(app)
       .get('/rest/user/security-question?email=horst@unknown-us.er')
 
-    assert.equal(res.status, 200)
-    assert.deepEqual(res.body, {})
+    assert.equal(unknown.status, existing.status)
+    assert.equal(unknown.text, existing.text)
   })
 
-  void it('GET security question throws error for missing email address', async () => {
+  void it('GET without an email address returns the same response instead of an error page', async () => {
     const res = await request(app)
       .get('/rest/user/security-question')
 
-    assert.equal(res.status, 500)
-    assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes(`${config.get<string>('application.name')} (Express`))
-    assert.ok(res.text.includes('Error: WHERE parameter &quot;email&quot; has invalid &quot;undefined&quot; value'))
+    assert.equal(res.status, 404)
+    assert.ok(res.text.includes('not available'))
+    assert.ok(!res.text.includes('WHERE parameter'))
   })
 
   void it('GET security question is not susceptible to SQL Injection attacks', async () => {
     const res = await request(app)
       .get("/rest/user/security-question?email=';")
 
-    assert.equal(res.status, 200)
+    assert.equal(res.status, 404)
   })
 })

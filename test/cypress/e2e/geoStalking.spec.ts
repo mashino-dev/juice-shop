@@ -1,44 +1,38 @@
+/*
+ * The Geo Stalking challenges depended on the security answer based Forgot Password feature,
+ * which is unavailable on Hardened. The challenges are defined but can not be solved.
+ */
 describe('/#/photo-wall', () => {
   beforeEach(() => {
     cy.visit('/#/forgot-password')
-    cy.intercept('GET', '/rest/user/security-question?email=*').as('securityQuestion')
   })
 
-  describe('challenge "geoStalkingMetaChallenge"', () => {
-    it('Should be possible to find the answer to a security question in the meta-data of a photo on the photo wall', () => {
-      cy.task<string>('GetFromMemories', 'geoStalkingMetaSecurityAnswer').then(
-        (answer: string) => {
+  const formerGeoStalkingChallenges = [
+    { name: 'Meta Geo Stalking', user: 'john', answerKey: 'geoStalkingMetaSecurityAnswer' },
+    { name: 'Visual Geo Stalking', user: 'emma', answerKey: 'geoStalkingVisualSecurityAnswer' }
+  ]
+
+  for (const { name, user, answerKey } of formerGeoStalkingChallenges) {
+    describe(`formerly challenge "${name}" (unavailable on Hardened)`, () => {
+      it('should not be possible to reset the password with the correct security answer', () => {
+        cy.task<string>('GetFromMemories', answerKey).then((answer: string) => {
           cy.task<string>('GetFromConfig', 'application.domain').then((appDomain: string) => {
-            cy.get('#email').type(`john@${appDomain}`)
-            cy.wait('@securityQuestion')
-            cy.get('#securityAnswer').should('not.be.disabled').focus().type(answer)
-            cy.get('#newPassword').focus().type('123456')
-            cy.get('#newPasswordRepeat').focus().type('123456')
-            cy.get('#resetButton').click()
-
-            cy.expectChallengeSolved({ challenge: 'Meta Geo Stalking' })
+            cy.request({
+              method: 'POST',
+              url: '/rest/user/reset-password',
+              failOnStatusCode: false,
+              body: { email: `${user}@${appDomain}`, answer, new: '123456', repeat: '123456' }
+            }).then((response) => {
+              expect(response.status).to.equal(404)
+              expect(response.body).to.not.have.property('user')
+            })
           })
-        }
-      )
+        })
+        cy.request({ method: 'GET', url: '/api/Challenges/?name=' + encodeURIComponent(name) }).then((response) => {
+          expect(response.body.data[0].disabledEnv).to.equal('Hardened')
+          expect(response.body.data[0].solved).to.equal(false)
+        })
+      })
     })
-  })
-
-  describe('challenge "geoStalkingVisualChallenge"', () => {
-    it('Should be possible to determine the answer to a security question by looking closely at an image on the photo wall', () => {
-      cy.task<string>('GetFromMemories', 'geoStalkingVisualSecurityAnswer').then(
-        (answer: string) => {
-          cy.task<string>('GetFromConfig', 'application.domain').then((appDomain: string) => {
-            cy.get('#email').type(`emma@${appDomain}`)
-            cy.wait('@securityQuestion')
-            cy.get('#securityAnswer').should('not.be.disabled').focus().type(answer)
-            cy.get('#newPassword').focus().type('123456')
-            cy.get('#newPasswordRepeat').focus().type('123456')
-            cy.get('#resetButton').click()
-
-            cy.expectChallengeSolved({ challenge: 'Visual Geo Stalking' })
-          })
-        }
-      )
-    })
-  })
+  }
 })
