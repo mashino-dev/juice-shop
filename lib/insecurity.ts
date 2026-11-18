@@ -51,7 +51,31 @@ export const cutOffPoisonNullByte = (str: string) => {
 
 export const isAuthorized = () => expressJwt(({ secret: publicKey }) as any)
 export const denyAll = () => expressJwt({ secret: '' + Math.random() } as any)
-export const authorize = (user = {}) => jwt.sign(user, privateKey, { expiresIn: '6h', algorithm: 'RS256' })
+const withoutPassword = (value: any): any => {
+  if (value === null || typeof value !== 'object') {
+    return value
+  }
+  const plain = typeof value.toJSON === 'function' ? value.toJSON() : { ...value }
+  delete plain.password
+  return plain
+}
+
+/**
+ * Copies a session object (`{ data: <user>, ... }`) without the stored password hash. Everything else
+ * (id, email, role, ...) is kept. The input is not modified.
+ */
+export const toSessionObject = <T>(session: T): T => {
+  const copy = withoutPassword(session)
+  if (copy !== null && typeof copy === 'object' && copy.data !== null && typeof copy.data === 'object') {
+    copy.data = withoutPassword(copy.data)
+  }
+  return copy
+}
+
+/** Copy of a user without the stored password hash, e.g. for responses. */
+export const omitPassword = (user: any) => withoutPassword(user)
+
+export const authorize = (user = {}) => jwt.sign(toSessionObject(user), privateKey, { expiresIn: '6h', algorithm: 'RS256' })
 export const verify = (token: string) => token ? (jws.verify as ((token: string, secret: string) => boolean))(token, publicKey) : false
 export const decode = (token: string) => { return jws.decode(token)?.payload }
 
@@ -71,8 +95,9 @@ export const authenticatedUsers: IAuthenticatedUsers = {
   tokenMap: {},
   idMap: {},
   put: function (token: string, user: ResponseWithUser) {
-    this.tokenMap[token] = user
-    this.idMap[user.data.id] = token
+    const session = toSessionObject(user)
+    this.tokenMap[token] = session
+    this.idMap[session.data.id] = token
   },
   get: function (token?: string) {
     return token ? this.tokenMap[utils.unquote(token)] : undefined

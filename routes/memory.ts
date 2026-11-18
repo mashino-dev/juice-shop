@@ -21,7 +21,8 @@ export function addMemory () {
 
 export function getMemories () {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const memories = await MemoryModel.findAll({ include: [UserModel] })
+    // Only the author name is displayed on the photo wall; never return further User attributes
+    const memories = await MemoryModel.findAll({ include: [{ model: UserModel, attributes: ['username'] }] })
     res.status(200).json({ status: 'success', data: memories })
   }
 }

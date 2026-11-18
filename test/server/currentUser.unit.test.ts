@@ -49,7 +49,7 @@ void describe('currentUser', () => {
     assert.deepEqual(res.json.mock.calls[0].arguments[0], { user: { id: 1, email: 'admin@juice-sh.op', lastLoginIp: '0.0.0.0', profileImage: '/assets/public/images/uploads/default.svg' } })
   })
 
-  void it('should filter specific requested fields and solve passwordHashLeakChallenge if password is leaked', () => {
+  void it('should filter specific requested fields and never return the password even if requested', () => {
     const token = security.authorize({ data: { id: 2, email: 'user@juice-sh.op', password: 'hashedpassword' } })
     req.cookies.token = token
     req.query.fields = 'email, password'
@@ -60,8 +60,8 @@ void describe('currentUser', () => {
     retrieveLoggedInUser()(req, res)
 
     assert.equal(res.json.mock.calls.length, 1)
-    assert.deepEqual(res.json.mock.calls[0].arguments[0], { user: { email: 'user@juice-sh.op', password: 'hashedpassword' } })
-    assert.equal(challenges.passwordHashLeakChallenge.solved, true)
+    assert.deepEqual(res.json.mock.calls[0].arguments[0], { user: { email: 'user@juice-sh.op' } })
+    assert.equal(challenges.passwordHashLeakChallenge.solved, false)
   })
 
   void it('should respond with jsonp and solve emailLeakChallenge when callback query param is present', () => {

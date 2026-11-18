@@ -36,9 +36,13 @@ export function changePassword () {
       return
     }
 
-    if (currentPassword && security.hash(currentPassword) !== loggedInUser.data.password) {
-      res.status(401).send(res.__('Current password is not correct.'))
-      return
+    if (currentPassword) {
+      // The password hash is never kept in the session: verify against the stored value
+      const userWithPassword = await UserModel.scope('withPassword').findByPk(loggedInUser.data.id)
+      if (userWithPassword == null || security.hash(currentPassword) !== userWithPassword.password) {
+        res.status(401).send(res.__('Current password is not correct.'))
+        return
+      }
     }
 
     try {
@@ -53,7 +57,7 @@ export function changePassword () {
         challenges.changePasswordBenderChallenge,
         () => user.id === 3 && !currentPassword && user.password === security.hash('slurmCl4ssic')
       )
-      res.json({ user })
+      res.json({ user: security.omitPassword(user) })
     } catch (error) {
       next(error)
     }

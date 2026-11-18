@@ -7,6 +7,9 @@ import { UserModel } from '../models/user'
 import { decode } from 'jsonwebtoken'
 import * as security from '../lib/insecurity'
 
+// Fixed mask: independent of the stored value so neither its format nor its length is revealed
+const PASSWORD_MASK = '*'.repeat(32)
+
 async function retrieveUserList (req: Request, res: Response, next: NextFunction) {
   try {
     const users = await UserModel.findAll()
@@ -23,7 +26,7 @@ async function retrieveUserList (req: Request, res: Response, next: NextFunction
 
         return {
           ...user.dataValues,
-          password: user.password?.replace(/./g, '*'),
+          password: PASSWORD_MASK,
           totpSecret: user.totpSecret?.replace(/./g, '*'),
           lastLoginTime
         }
