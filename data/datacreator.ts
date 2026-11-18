@@ -705,7 +705,7 @@ async function createSecurityQuestions () {
 
 async function createSecurityAnswer (UserId: number, SecurityQuestionId: number, answer: string) {
   return await SecurityAnswerModel.create({ SecurityQuestionId, UserId, answer }).catch((err: unknown) => {
-    logger.error(`Could not insert SecurityAnswer ${answer} mapped to UserId ${UserId}: ${utils.getErrorMessage(err)}`)
+    logger.error(`Could not insert SecurityAnswer mapped to UserId ${UserId}: ${utils.getErrorMessage(err)}`)
   })
 }
 

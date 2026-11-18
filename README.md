@@ -42,6 +42,7 @@ For a detailed introduction, full list of features and architecture overview ple
     - [Packaged Distributions](#packaged-distributions)
     - [Docker Container](#docker-container)
     - [Vagrant](#vagrant)
+- [Known limitations of this hardened fork](#known-limitations-of-this-hardened-fork)
 - [Demo](#demo)
 - [Documentation](#documentation)
     - [Node.js version compatibility](#nodejs-version-compatibility)
@@ -118,6 +119,20 @@ For a detailed introduction, full list of features and architecture overview ple
    of the repository)
 3. Run `cd vagrant && vagrant up`
 4. Browse to [192.168.56.110](http://192.168.56.110)
+
+## Known limitations of this hardened fork
+
+- **Forgot Password is unavailable.** The security answer based password reset allowed unauthenticated account takeover.
+  `POST /rest/user/reset-password` never changes a password and `GET /rest/user/security-question` never discloses a question;
+  both return the same fixed `404` response for every input. There is currently **no account recovery path** (no e-mail based
+  reset). Locked-out users need an administrator to help them. An e-mail based single-use token reset is planned as a separate change.
+- Security answers are no longer created via the public `POST /api/SecurityAnswers` API (always rejected). They are stored by the
+  server during registration (`POST /api/Users`) for the newly created user and are still used by the data erasure form.
+  Users registering without a security answer (e.g. via OAuth or the API) keep having none.
+- The following challenges depend on the removed Forgot Password flow, stay defined but are unavailable (`Hardened`) and can not be
+  solved: _Reset Jim's/Bender's/Bjoern's/Morty's/Uvogin's Password_, _Bjoern's Favorite Pet_, _Meta Geo Stalking_ and _Visual Geo Stalking_.
+- Not part of this change and tracked separately: revoking already issued sessions/JWTs after a password change, the rate limiter
+  (`trust proxy` makes `req.ip` client-controlled), e-mail case normalization, removal of fixed seed security answers and the MD5 password hashing.
 
 ## Demo
 

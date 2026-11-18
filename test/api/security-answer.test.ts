@@ -27,7 +27,7 @@ void describe('/api/SecurityAnswers', () => {
     assert.equal(res.status, 401)
   })
 
-  void it('POST new security answer for existing user fails from unique constraint', async () => {
+  void it('POST new security answer is forbidden via public API even when authenticated', async () => {
     const res = await request(app)
       .post('/api/SecurityAnswers')
       .set(authHeader)
@@ -37,9 +37,7 @@ void describe('/api/SecurityAnswers', () => {
         answer: 'Horst'
       })
 
-    assert.equal(res.status, 400)
-    assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(res.body.message, 'Validation error')
+    assert.equal(res.status, 401)
   })
 })
 
@@ -52,7 +50,7 @@ void describe('/api/SecurityAnswers/:id', () => {
     assert.equal(res.status, 401)
   })
 
-  void it('POST security answer for a newly registered user', async () => {
+  void it('POST security answer for a newly registered user is forbidden, answers are stored during registration', async () => {
     const userRes = await request(app)
       .post('/api/Users')
       .set({ 'content-type': 'application/json' })
@@ -65,18 +63,13 @@ void describe('/api/SecurityAnswers/:id', () => {
 
     const res = await request(app)
       .post('/api/SecurityAnswers')
-      .set(authHeader)
       .send({
-        UserId: userRes.body.id,
+        UserId: userRes.body.data.id,
         SecurityQuestionId: 1,
         answer: 'Horst'
       })
 
-    assert.equal(res.status, 201)
-    assert.ok(res.headers['content-type']?.includes('application/json'))
-    assert.equal(typeof res.body.data.id, 'number')
-    assert.equal(typeof res.body.data.createdAt, 'string')
-    assert.equal(typeof res.body.data.updatedAt, 'string')
+    assert.equal(res.status, 401)
   })
 
   void it('PUT update existing security answer is forbidden via public API even when authenticated', async () => {
