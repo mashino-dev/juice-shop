@@ -48,6 +48,8 @@
     - 'Think of the simplest possible implementations of a distinction between regular users and administrators.'
   mitigationUrl: 'https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html'
   key: registerAdminChallenge
+  disabledEnv:
+    - Hardened
 -
   name: 'Admin Section'
   category: 'Broken Access Control'
