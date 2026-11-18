@@ -20,10 +20,10 @@ before(async () => {
 }, { timeout: 60000 })
 
 void describe('/rest/memories', () => {
-  void it('GET memories via public API', async () => {
+  void it('GET memories via public API is forbidden', async () => {
     const res = await request(app)
       .get('/rest/memories')
-    assert.equal(res.status, 200)
+    assert.equal(res.status, 401)
   })
 
   void it('GET memories via a valid authorization token', async () => {

@@ -118,7 +118,17 @@ const UserModelInit = (sequelize: Sequelize) => { // vuln-code-snippet start wea
     {
       tableName: 'Users',
       paranoid: true,
-      sequelize
+      sequelize,
+      // The stored password hash is never loaded unless a caller explicitly asks for it via
+      // UserModel.scope('withPassword'). Raw SQL queries ignore scopes.
+      defaultScope: {
+        attributes: { exclude: ['password'] }
+      },
+      scopes: {
+        withPassword: {
+          attributes: { include: ['password'] }
+        }
+      }
     }
   )
 

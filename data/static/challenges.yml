@@ -9,6 +9,8 @@
     - 'An overly generic solution for data retrieval can backfire if not properly safeguarded.'
   mitigationUrl: 'https://owasp.org/API-Security/editions/2019/en/0xa3-excessive-data-exposure'
   key: passwordHashLeakChallenge
+  disabledEnv:
+    - Hardened
 -
   name: 'API-only XSS'
   category: 'XSS'
