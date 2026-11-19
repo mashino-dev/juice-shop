@@ -1,8 +1,8 @@
 describe('/', () => {
   // Neither exploit payload can be produced by a real or virtual authenticator, so both are sent as raw requests.
 
-  describe('challenge "passkeySignatureChallenge"', () => {
-    it('should solve by submitting a login assertion with an invalid signature', () => {
+  describe('formerly challenge "passkeySignatureChallenge" (unavailable on Hardened)', () => {
+    it('should reject a login assertion with an invalid signature and keep the challenge unsolved', () => {
       cy.request({
         method: 'POST',
         url: '/rest/passkey/login-options',
@@ -15,14 +15,19 @@ describe('/', () => {
           cy.request({
             method: 'POST',
             url: '/rest/passkey/login-verify',
-            body: { assertion, authToken }
+            body: { assertion, authToken },
+            failOnStatusCode: false
           }).then((verifyResponse) => {
-            expect(verifyResponse.body.authentication.token).to.be.a('string')
+            expect(verifyResponse.status).to.equal(401)
+            expect(verifyResponse.body).to.not.have.property('authentication')
           })
         })
       })
 
-      cy.expectChallengeSolved({ challenge: 'Passkey Bypass' })
+      cy.request({ method: 'GET', url: '/api/Challenges/?name=Passkey Bypass' }).then((response) => {
+        expect(response.body.data[0].disabledEnv).to.equal('Hardened')
+        expect(response.body.data[0].solved).to.equal(false)
+      })
     })
   })
 

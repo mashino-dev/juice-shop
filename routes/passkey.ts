@@ -193,19 +193,29 @@ export async function loginVerify (req: Request, res: Response) {
     return
   }
 
-  const verification = await verifyAuthenticationResponse({
-    response: assertion,
-    expectedChallenge: decoded.challenge,
-    expectedOrigin: origin,
-    expectedRPID: rpID,
-    requireUserVerification: false,
-    credential: {
-      id: passkey.credentialID,
-      publicKey: isoBase64URL.toBuffer(passkey.publicKey),
-      counter: passkey.counter,
-      transports: toTransports(passkey)
-    }
-  })
+  let verification
+  try {
+    verification = await verifyAuthenticationResponse({
+      response: assertion,
+      expectedChallenge: decoded.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: false,
+      credential: {
+        id: passkey.credentialID,
+        publicKey: isoBase64URL.toBuffer(passkey.publicKey),
+        counter: passkey.counter,
+        transports: toTransports(passkey)
+      }
+    })
+  } catch {
+    res.status(401).send()
+    return
+  }
+  if (verification.verified !== true) { // vuln-code-snippet neutral-line passkeySignatureChallenge
+    res.status(401).send() // vuln-code-snippet neutral-line passkeySignatureChallenge
+    return // vuln-code-snippet neutral-line passkeySignatureChallenge
+  } // vuln-code-snippet neutral-line passkeySignatureChallenge
 
   const user = await UserModel.findByPk(passkey.UserId)
   if (!user) {
@@ -213,13 +223,10 @@ export async function loginVerify (req: Request, res: Response) {
     return
   }
 
-  challengeUtils.solveIf(challenges.passkeySignatureChallenge, () => { return user.id === users.passkeyUser.id && !verification.verified }) // vuln-code-snippet hide-line
   await solvePasskeyHijack(user, passkey, verification.verified) // vuln-code-snippet hide-line
-  if (verification.verified) { // vuln-code-snippet neutral-line passkeySignatureChallenge
-    passkey.counter = verification.authenticationInfo.newCounter // vuln-code-snippet neutral-line passkeySignatureChallenge
-    await passkey.save() // vuln-code-snippet neutral-line passkeySignatureChallenge
-  } // vuln-code-snippet neutral-line passkeySignatureChallenge
-  await issuePasskeySession(user, res) // vuln-code-snippet vuln-line passkeySignatureChallenge
+  passkey.counter = verification.authenticationInfo.newCounter
+  await passkey.save()
+  await issuePasskeySession(user, res)
 }
 // vuln-code-snippet end passkeySignatureChallenge
 

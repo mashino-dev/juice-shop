@@ -17,21 +17,26 @@ export async function loginVerify (req: Request, res: Response) {
     return
   }
 
-  const verification = await verifyAuthenticationResponse({
-    response: assertion,
-    expectedChallenge: decoded.challenge,
-    expectedOrigin: origin,
-    expectedRPID: rpID,
-    requireUserVerification: false,
-    credential: {
-      id: passkey.credentialID,
-      publicKey: isoBase64URL.toBuffer(passkey.publicKey),
-      counter: passkey.counter,
-      transports: toTransports(passkey)
-    }
-  })
-
-  if (!verification.verified) {
+  let verification
+  try {
+    verification = await verifyAuthenticationResponse({
+      response: assertion,
+      expectedChallenge: decoded.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: false,
+      credential: {
+        id: passkey.credentialID,
+        publicKey: isoBase64URL.toBuffer(passkey.publicKey),
+        counter: passkey.counter,
+        transports: toTransports(passkey)
+      }
+    })
+  } catch {
+    res.status(401).send()
+    return
+  }
+  if (verification.verified !== true) {
     res.status(401).send()
     return
   }

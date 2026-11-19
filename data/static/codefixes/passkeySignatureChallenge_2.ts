@@ -17,19 +17,29 @@ export async function loginVerify (req: Request, res: Response) {
     return
   }
 
-  const verification = await verifyAuthenticationResponse({
-    response: assertion,
-    expectedChallenge: decoded.challenge,
-    expectedOrigin: origin,
-    expectedRPID: rpID,
-    requireUserVerification: false,
-    credential: {
-      id: passkey.credentialID,
-      publicKey: isoBase64URL.toBuffer(passkey.publicKey),
-      counter: passkey.counter,
-      transports: toTransports(passkey)
-    }
-  })
+  let verification
+  try {
+    verification = await verifyAuthenticationResponse({
+      response: assertion,
+      expectedChallenge: decoded.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: false,
+      credential: {
+        id: passkey.credentialID,
+        publicKey: isoBase64URL.toBuffer(passkey.publicKey),
+        counter: passkey.counter,
+        transports: toTransports(passkey)
+      }
+    })
+  } catch {
+    res.status(401).send()
+    return
+  }
+  if (!verification.authenticationInfo.userVerified) {
+    res.status(401).send()
+    return
+  }
 
   const user = await UserModel.findByPk(passkey.UserId)
   if (!user) {
@@ -37,10 +47,6 @@ export async function loginVerify (req: Request, res: Response) {
     return
   }
 
-  if (!verification.authenticationInfo.userVerified) {
-    res.status(401).send()
-    return
-  }
   passkey.counter = verification.authenticationInfo.newCounter
   await passkey.save()
   await issuePasskeySession(user, res)
