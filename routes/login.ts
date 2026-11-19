@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2026 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
  */
-import { type Request, type Response, type NextFunction } from 'express'
+import { type Request, type Response } from 'express'
 import config from 'config'
 
 import * as challengeUtils from '../lib/challengeUtils'
@@ -10,13 +10,13 @@ import { challenges, users } from '../data/datacache'
 import { BasketModel } from '../models/basket'
 import * as security from '../lib/insecurity'
 import { UserModel } from '../models/user'
-import * as models from '../models/index'
 import { type User } from '../data/types'
 import * as utils from '../lib/utils'
+import logger from '../lib/logger'
 
 // vuln-code-snippet start loginAdminChallenge loginBenderChallenge loginJimChallenge
 export function login () {
-  function afterLogin (user: User, res: Response, next: NextFunction) {
+  function afterLogin (user: User, res: Response) {
     verifyPostLoginChallenges(user) // vuln-code-snippet hide-line
     BasketModel.findOrCreate({ where: { UserId: user.id } })
       .then(([basket]: [BasketModel, boolean]) => {
@@ -25,13 +25,19 @@ export function login () {
         security.authenticatedUsers.put(token, authenticatedUser)
         res.json({ authentication: { token, bid: basket.id, umail: user.email } })
       }).catch((error: Error) => {
-        next(error)
+        failLogin(error, res)
       })
   }
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response) => {
+    req.body ??= {} // vuln-code-snippet hide-line
     verifyPreLoginChallenges(req) // vuln-code-snippet hide-line
-    models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: UserModel, plain: true }) // vuln-code-snippet vuln-line loginAdminChallenge loginBenderChallenge loginJimChallenge
+    const { email, password } = req.body // vuln-code-snippet hide-line
+    if (typeof email !== 'string' || typeof password !== 'string' || email.includes('\0')) { // vuln-code-snippet hide-line
+      res.status(401).send(res.__('Invalid email or password.')) // vuln-code-snippet hide-line
+      return // vuln-code-snippet hide-line
+    } // vuln-code-snippet hide-line
+    UserModel.findOne({ where: { email, password: security.hash(password) } }) // vuln-code-snippet vuln-line loginAdminChallenge loginBenderChallenge loginJimChallenge
       .then((authenticatedUser) => { // vuln-code-snippet neutral-line loginAdminChallenge loginBenderChallenge loginJimChallenge
         const user = utils.queryResultToJson(authenticatedUser)
         if (user.data?.id && user.data.totpSecret !== '') {
@@ -45,15 +51,20 @@ export function login () {
             }
           })
         } else if (user.data?.id) {
-          afterLogin(user.data, res, next)
+          afterLogin(user.data, res)
         } else {
           res.status(401).send(res.__('Invalid email or password.'))
         }
       }).catch((error: Error) => {
-        next(error)
+        failLogin(error, res)
       })
   }
   // vuln-code-snippet end loginAdminChallenge loginBenderChallenge loginJimChallenge
+
+  function failLogin (error: Error, res: Response) {
+    logger.error(`Login query failed: ${error.name}`)
+    res.status(500).json({ status: 'error', message: 'Internal Server Error' })
+  }
 
   function verifyPreLoginChallenges (req: Request) {
     challengeUtils.solveIf(challenges.weakPasswordChallenge, () => { return req.body.email === 'admin@' + config.get<string>('application.domain') && req.body.password === 'admin123' })

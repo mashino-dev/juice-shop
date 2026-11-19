@@ -1,11 +1,9 @@
 export function searchProducts () {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response) => {
     let criteria: any = req.query.q === 'undefined' ? '' : req.query.q ?? ''
     criteria = (criteria.length <= 200) ? criteria : criteria.substring(0, 200)
-    models.sequelize.query(
-        `SELECT * FROM Products WHERE ((name LIKE '%:criteria%' OR description LIKE '%:criteria%') AND deletedAt IS NULL) ORDER BY name`,
-        { replacements: { criteria } }
-      ).then(([products]: any) => {
+    models.sequelize.query('SELECT * FROM Products WHERE ((name LIKE $criteria OR description LIKE $criteria) AND deletedAt IS NULL) ORDER BY name', { bind: { criteria: '%' + criteria + '%' } })
+      .then(([products]: any) => {
         const dataString = JSON.stringify(products)
         for (let i = 0; i < products.length; i++) {
           products[i].name = req.__(products[i].name)
@@ -15,8 +13,9 @@ export function searchProducts () {
           }
         }
         res.json(utils.queryResultToJson(products))
-      }).catch((error: ErrorWithParent) => {
-        next(error.parent)
+      }).catch((error: Error) => {
+        logger.error(`Product search failed: ${error.name}`)
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' })
       })
   }
 }

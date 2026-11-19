@@ -24,6 +24,7 @@ import * as utils from '../../lib/utils'
 import { challenges } from '../../data/datacache'
 import { UserModel } from '../../models/user'
 import { MemoryModel } from '../../models/memory'
+import * as models from '../../models/index'
 
 const jsonHeader = { 'content-type': 'application/json' }
 const domain = config.get<string>('application.domain')
@@ -399,19 +400,20 @@ void describe('challenges', () => {
     assert.deepEqual(utils.getChallengeEnablementStatus(challenges.passwordHashLeakChallenge), { enabled: false, disabledBecause: 'Hardened' })
   })
 
-  void it('login SQL injection challenges and Union SQL Injection are not touched by this change', async () => {
-    for (const key of ['loginAdminChallenge', 'loginJimChallenge', 'loginBenderChallenge', 'weakPasswordChallenge', 'unionSqlInjectionChallenge']) {
-      assert.equal(utils.isChallengeEnabled((challenges as Record<string, any>)[key]), true, `${key} must stay available`)
+  void it('login SQL injection challenges and Union SQL Injection are unavailable on Hardened once the SQL injection is fixed', async () => {
+    for (const key of ['loginAdminChallenge', 'loginJimChallenge', 'loginBenderChallenge', 'unionSqlInjectionChallenge']) {
+      assert.equal(utils.isChallengeEnabled((challenges as Record<string, any>)[key]), false, `${key} must be unavailable`)
     }
+    assert.equal(utils.isChallengeEnabled(challenges.weakPasswordChallenge), true)
   })
 
-  void it('Union SQL Injection can still be solved (challenge check still sees stored hashes)', async () => {
+  void it('Union SQL Injection no longer exposes stored hashes and stays unsolved', async () => {
+    const [hashRows]: any = await models.sequelize.query('SELECT password FROM Users')
     const res = await request(app).get('/rest/products/search').query({ q: "')) union select id,email,password,'4','5','6','7','8','9','10' from users--" })
     assert.equal(res.status, 200)
-    for (let attempt = 0; attempt < 50 && !challenges.unionSqlInjectionChallenge.solved; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
-    assert.equal(challenges.unionSqlInjectionChallenge.solved, true)
+    assert.equal(hashRows.some((row: { password: string }) => res.text.includes(row.password)), false)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    assert.equal(challenges.unionSqlInjectionChallenge.solved, false)
   })
 })
 

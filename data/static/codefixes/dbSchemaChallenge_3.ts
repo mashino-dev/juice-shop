@@ -1,7 +1,7 @@
 const injectionChars = /"|'|;|and|or|;|#/i;
 
 export function searchProducts () {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response) => {
     let criteria: any = req.query.q === 'undefined' ? '' : req.query.q ?? ''
     criteria = (criteria.length <= 200) ? criteria : criteria.substring(0, 200)
     if (criteria.match(injectionChars)) {
@@ -19,8 +19,9 @@ export function searchProducts () {
           }
         }
         res.json(utils.queryResultToJson(products))
-      }).catch((error: ErrorWithParent) => {
-        next(error.parent)
+      }).catch((error: Error) => {
+        logger.error(`Product search failed: ${error.name}`)
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' })
       })
   }
 }

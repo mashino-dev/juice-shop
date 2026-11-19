@@ -31,21 +31,33 @@ describe('/#/search', () => {
 })
 
 describe('/rest/products/search', () => {
-  describe('challenge "unionSqlInjectionChallenge"', () => {
-    it('query param in product search endpoint should be susceptible to UNION SQL injection attacks', () => {
+  describe('formerly challenge "unionSqlInjectionChallenge" (unavailable on Hardened)', () => {
+    it('query param in product search endpoint should no longer be susceptible to UNION SQL injection attacks', () => {
       cy.request(
         "/rest/products/search?q=')) union select id,'2','3',email,password,'6','7','8','9','10' from users--"
-      )
-      cy.expectChallengeSolved({ challenge: 'User Credentials' })
+      ).then((response) => {
+        expect(response.status).to.equal(200)
+        expect(response.body.data.length).to.equal(0)
+      })
+      cy.request('/api/Challenges/?name=User Credentials').then((response) => {
+        expect(response.body.data[0].disabledEnv).to.equal('Hardened')
+        expect(response.body.data[0].solved).to.equal(false)
+      })
     })
   })
 
-  describe('challenge "dbSchemaChallenge"', () => {
-    it('query param in product search endpoint should be susceptible to UNION SQL injection attacks', () => {
+  describe('formerly challenge "dbSchemaChallenge" (unavailable on Hardened)', () => {
+    it('query param in product search endpoint should no longer be susceptible to UNION SQL injection attacks', () => {
       cy.request(
         "/rest/products/search?q=')) union select sql,'2','3','4','5','6','7','8','9','10' from sqlite_master--"
-      )
-      cy.expectChallengeSolved({ challenge: 'Database Schema' })
+      ).then((response) => {
+        expect(response.status).to.equal(200)
+        expect(response.body.data.length).to.equal(0)
+      })
+      cy.request('/api/Challenges/?name=Database Schema').then((response) => {
+        expect(response.body.data[0].disabledEnv).to.equal('Hardened')
+        expect(response.body.data[0].solved).to.equal(false)
+      })
     })
   })
 
@@ -57,7 +69,7 @@ describe('/rest/products/search', () => {
       })
     })
 
-    it('search query should logically reveal the special product', () => {
+    it('search query should not reveal the logically deleted special product', () => {
       cy.request("/rest/products/search?q='))--")
         .its('body')
         .then((sourceContent) => {
@@ -70,7 +82,7 @@ describe('/rest/products/search', () => {
               }
             })
             // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            expect(foundProduct).to.be.true
+            expect(foundProduct).to.be.false
           })
         })
     })
@@ -84,7 +96,7 @@ describe('/rest/products/search', () => {
       })
     })
 
-    it('search query should reveal logically deleted christmas special product on SQL injection attack', () => {
+    it('search query should not reveal logically deleted christmas special product on SQL injection attack', () => {
       cy.request("/rest/products/search?q='))--")
         .its('body')
         .then((sourceContent) => {
@@ -97,7 +109,7 @@ describe('/rest/products/search', () => {
               }
             })
             // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            expect(foundProduct).to.be.true
+            expect(foundProduct).to.be.false
           })
         })
     })

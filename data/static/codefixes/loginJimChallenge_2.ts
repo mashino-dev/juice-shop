@@ -1,5 +1,5 @@
 export function login () {
-  function afterLogin (user: User, res: Response, next: NextFunction) {
+  function afterLogin (user: User, res: Response) {
     BasketModel.findOrCreate({ where: { UserId: user.id } })
       .then(([basket]: [BasketModel, boolean]) => {
         const authenticatedUser = { data: user, bid: basket.id } // keep track of original basket
@@ -7,11 +7,11 @@ export function login () {
         security.authenticatedUsers.put(token, authenticatedUser)
         res.json({ authentication: { token, bid: basket.id, umail: user.email } })
       }).catch((error: Error) => {
-        next(error)
+        failLogin(error, res)
       })
   }
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response) => {
     models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: models.User, plain: false })
       .then((authenticatedUser) => {
         const user = utils.queryResultToJson(authenticatedUser)
@@ -26,11 +26,11 @@ export function login () {
             }
           })
         } else if (user.data?.id) {
-          afterLogin(user.data, res, next)
+          afterLogin(user.data, res)
         } else {
           res.status(401).send(res.__('Invalid email or password.'))
         }
       }).catch((error: Error) => {
-        next(error)
+        failLogin(error, res)
       })
   }
