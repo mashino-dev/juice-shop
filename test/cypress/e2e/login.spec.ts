@@ -1,50 +1,63 @@
+/*
+ * The login SQL injection is fixed: every former attack payload is rejected and the challenges that
+ * depended on it are defined but unavailable on Hardened, so they can not be solved.
+ */
+const expectUnavailableAndUnsolved = (challenge: string) => {
+  cy.request({ method: 'GET', url: '/api/Challenges/?name=' + encodeURIComponent(challenge) }).then((response) => {
+    expect(response.body.data[0].disabledEnv).to.equal('Hardened')
+    expect(response.body.data[0].solved).to.equal(false)
+  })
+}
+
+const attemptLogin = (email: string, password: string) => {
+  cy.intercept('POST', '/rest/user/login').as('login')
+  cy.get('#email').type(email, { delay: 1 })
+  cy.get('#password').type(password)
+  cy.get('#loginButton').click()
+  cy.wait('@login').its('response.statusCode').should('equal', 401)
+  cy.url().should('match', /\/login/)
+}
+
 describe('/#/login', () => {
   beforeEach(() => {
     cy.visit('/#/login')
   })
 
-  describe('challenge "loginAdminChallenge"', () => {
-    it('should log in Admin with SQLI attack on email field using "\' or 1=1--"', () => {
-      cy.get('#email').type("' or 1=1--")
-      cy.get('#password').type('a')
-      cy.get('#loginButton').click()
+  describe('formerly challenge "loginAdminChallenge" (unavailable on Hardened)', () => {
+    it('should reject the SQLI attack on email field using "\' or 1=1--"', () => {
+      attemptLogin("' or 1=1--", 'a')
+      expectUnavailableAndUnsolved('Login Admin')
     })
 
-    it('should log in Admin with SQLI attack on email field using "admin@<juice-sh.op>\'--"', () => {
+    it('should reject the SQLI attack on email field using "admin@<juice-sh.op>\'--"', () => {
       cy.task<string>('GetFromConfig', 'application.domain').then(
         (appDomain: string) => {
-          cy.get('#email').type(`admin@${appDomain}'--`)
-          cy.get('#password').type('a')
-          cy.get('#loginButton').click()
+          attemptLogin(`admin@${appDomain}'--`, 'a')
         }
       )
-      cy.expectChallengeSolved({ challenge: 'Login Admin' })
+      expectUnavailableAndUnsolved('Login Admin')
     })
   })
 
-  describe('challenge "loginJimChallenge"', () => {
-    it('should log in Jim with SQLI attack on email field using "jim@<juice-sh.op>\'--"', () => {
+  describe('formerly challenge "loginJimChallenge" (unavailable on Hardened)', () => {
+    it('should reject the SQLI attack on email field using "jim@<juice-sh.op>\'--"', () => {
       cy.task<string>('GetFromConfig', 'application.domain').then(
         (appDomain: string) => {
-          cy.get('#email').type(`jim@${appDomain}'--`)
-          cy.get('#password').type('a')
-          cy.get('#loginButton').click()
+          attemptLogin(`jim@${appDomain}'--`, 'a')
         }
       )
-      cy.expectChallengeSolved({ challenge: 'Login Jim' })
+      expectUnavailableAndUnsolved('Login Jim')
     })
   })
 
-  describe('challenge "loginBenderChallenge"', () => {
-    it('should log in Bender with SQLI attack on email field using "bender@<juice-sh.op>\'--"', () => {
+  describe('formerly challenge "loginBenderChallenge" (unavailable on Hardened)', () => {
+    it('should reject the SQLI attack on email field using "bender@<juice-sh.op>\'--"', () => {
       cy.task<string>('GetFromConfig', 'application.domain').then(
         (appDomain: string) => {
-          cy.get('#email').type(`bender@${appDomain}'--`)
-          cy.get('#password').type('a')
-          cy.get('#loginButton').click()
+          attemptLogin(`bender@${appDomain}'--`, 'a')
         }
       )
-      cy.expectChallengeSolved({ challenge: 'Login Bender' })
+      expectUnavailableAndUnsolved('Login Bender')
     })
   })
 
@@ -113,23 +126,15 @@ describe('/#/login', () => {
     })
   })
 
-  describe('challenge "twoFactorAuthUnsafeSecretStorageChallenge"', () => {
-    it('should be able to log into a existing 2fa protected account given the right token', () => {
+  describe('formerly challenge "twoFactorAuthUnsafeSecretStorageChallenge" (unavailable on Hardened)', () => {
+    it('should not skip the password check of a 2fa protected account via SQLI and therefore never ask for the token', () => {
       cy.task<string>('GetFromConfig', 'application.domain').then(
         (appDomain: string) => {
-          cy.get('#email').type(`wurstbrot@${appDomain}'--`)
-          cy.get('#password').type('Never mind...')
-          cy.get('#loginButton').click()
+          attemptLogin(`wurstbrot@${appDomain}'--`, 'Never mind...')
         }
       )
-
-      cy.task<string>('GenerateAuthenticator', 'IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH').then(
-        (totpToken: string) => {
-          void cy.get('#totpToken').type(totpToken)
-          void cy.get('#totpSubmitButton').click()
-        }
-      )
-      cy.expectChallengeSolved({ challenge: 'Two Factor Authentication' })
+      cy.get('#totpToken').should('not.exist')
+      expectUnavailableAndUnsolved('Two Factor Authentication')
     })
   })
 
@@ -143,34 +148,33 @@ describe('/#/login', () => {
     })
   })
 
-  describe('challenge "ghostLoginChallenge"', () => {
-    it('should be able to log in as chris.pike@juice-sh.op by using "\' or deletedAt IS NOT NULL --"', () => {
-      cy.get('#email').type("' or deletedAt IS NOT NULL--")
-      cy.get('#password').type('a')
-      cy.get('#loginButton').click()
+  describe('formerly challenge "ghostLoginChallenge" (unavailable on Hardened)', () => {
+    it('should reject the SQLI attack on email field using "\' or deletedAt IS NOT NULL --"', () => {
+      attemptLogin("' or deletedAt IS NOT NULL--", 'a')
+      expectUnavailableAndUnsolved('GDPR Data Erasure')
     })
 
-    it('should be able to log in as chris.pike@juice-sh.op by using "chris.pike@juice-sh.op\' --"', () => {
+    it('should reject the SQLI attack on email field using "chris.pike@<juice-sh.op>\'--"', () => {
       cy.task<string>('GetFromConfig', 'application.domain').then(
         (appDomain: string) => {
-          cy.get('#email').type(`chris.pike@${appDomain}'--`)
-          cy.get('#password').type('a')
-          cy.get('#loginButton').click()
+          attemptLogin(`chris.pike@${appDomain}'--`, 'a')
         }
       )
-      cy.expectChallengeSolved({ challenge: 'GDPR Data Erasure' })
+      expectUnavailableAndUnsolved('GDPR Data Erasure')
     })
   })
 
-  describe('challenge "ephemeralAccountant"', () => {
-    it('should log in non-existing accountant user with SQLI attack on email field using UNION SELECT payload', () => {
-      cy.get('#email').type(
-        "' UNION SELECT * FROM (SELECT 15 as 'id', '' as 'username', 'acc0unt4nt@juice-sh.op' as 'email', '12345' as 'password', 'accounting' as 'role', '123' as 'deluxeToken', '1.2.3.4' as 'lastLoginIp' , '/assets/public/images/uploads/default.svg' as 'profileImage', '' as 'totpSecret', 1 as 'isActive', '1999-08-16 14:14:41.644 +00:00' as 'createdAt', '1999-08-16 14:33:41.930 +00:00' as 'updatedAt', null as 'deletedAt')--",
-        { delay: 1 } // cypress defaults to 10ms delay between keystrokes, which here is nearly 5s of typing the payload...
+  describe('formerly challenge "ephemeralAccountantChallenge" (unavailable on Hardened)', () => {
+    it('should reject the UNION SELECT payload on email field that forges a non-existing accountant user', () => {
+      cy.task<string>('GetFromConfig', 'application.domain').then(
+        (appDomain: string) => {
+          attemptLogin(
+            `' UNION SELECT * FROM (SELECT 15 as 'id', '' as 'username', 'acc0unt4nt@${appDomain}' as 'email', '12345' as 'password', 'accounting' as 'role', '123' as 'deluxeToken', '1.2.3.4' as 'lastLoginIp' , '/assets/public/images/uploads/default.svg' as 'profileImage', '' as 'totpSecret', 1 as 'isActive', '1999-08-16 14:14:41.644 +00:00' as 'createdAt', '1999-08-16 14:33:41.930 +00:00' as 'updatedAt', null as 'deletedAt')--`,
+            'a'
+          )
+        }
       )
-      cy.get('#password').type('a')
-      cy.get('#loginButton').click()
-      cy.expectChallengeSolved({ challenge: 'Ephemeral Accountant' })
+      expectUnavailableAndUnsolved('Ephemeral Accountant')
     })
   })
 
