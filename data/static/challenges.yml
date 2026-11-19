@@ -1654,6 +1654,8 @@
     - 'You will not be able to produce a valid signature. Maybe you do not have to.'
   mitigationUrl: 'https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html'
   key: passkeySignatureChallenge
+  disabledEnv:
+    - Hardened
 -
   name: 'Passkey Hijack'
   category: 'Broken Access Control'

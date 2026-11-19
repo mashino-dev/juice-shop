@@ -155,11 +155,13 @@ void describe('/rest/passkey/login-verify', () => {
     const replayed = buildAssertion(victim, second.challenge, { tamper: false, counter: signCount })
     const res = await loginVerify({ assertion: replayed, authToken: second.authToken })
 
-    assert.equal(res.status, 500)
+    assert.equal(res.status, 401)
+    assert.equal(res.text, '')
     assert.equal(res.body.authentication, undefined)
+    assert.equal((await PasskeyModel.findOne({ where: { credentialID: victim.credentialID } }))?.counter, signCount)
   })
 
-  void it('POST accepts an invalid signature and solves passkeySignatureChallenge', async () => {
+  void it('POST rejects an invalid signature without a token, counter change or solving passkeySignatureChallenge', async () => {
     const invalidSignatures = {
       'signed with a different key': (challenge: string) => sign(victim, challenge, { tamper: true }),
       // The last byte belongs to the DER-encoded `s` integer, so the signature stays well-formed.
@@ -171,17 +173,20 @@ void describe('/rest/passkey/login-verify', () => {
     }
     for (const [name, forge] of Object.entries(invalidSignatures)) {
       challenges.passkeySignatureChallenge.solved = false
+      const counterBefore = (await PasskeyModel.findOne({ where: { credentialID: victim.credentialID } }))?.counter
       const { challenge, authToken } = await loginOptions()
 
       const res = await loginVerify({ assertion: forge(challenge), authToken })
 
-      assert.equal(res.status, 200, name)
-      assert.equal(res.body.authentication.umail, VICTIM.email, name)
-      assert.equal(challenges.passkeySignatureChallenge.solved, true, name)
+      assert.equal(res.status, 401, name)
+      assert.equal(res.text, '', name)
+      assert.equal(res.body.authentication, undefined, name)
+      assert.equal((await PasskeyModel.findOne({ where: { credentialID: victim.credentialID } }))?.counter, counterBefore, name)
+      assert.equal(challenges.passkeySignatureChallenge.solved, false, name)
     }
   })
 
-  void it('POST accepts a forged signature for a non-victim passkey without solving passkeySignatureChallenge', async () => {
+  void it('POST rejects a forged signature for a non-victim passkey without a token', async () => {
     challenges.passkeySignatureChallenge.solved = false
     const { token } = await login(app, JIM)
     const { credentialID } = await registerPasskey(token)
@@ -189,8 +194,9 @@ void describe('/rest/passkey/login-verify', () => {
 
     const res = await loginVerify({ assertion: sign({ ...victim, credentialID }, challenge, { tamper: true }), authToken })
 
-    assert.equal(res.status, 200)
-    assert.equal(res.body.authentication.umail, JIM.email)
+    assert.equal(res.status, 401)
+    assert.equal(res.text, '')
+    assert.equal(res.body.authentication, undefined)
     assert.equal(challenges.passkeySignatureChallenge.solved, false)
   })
 
@@ -211,12 +217,13 @@ void describe('/rest/passkey/login-verify', () => {
     challenges.passkeySignatureChallenge.solved = false
     const { challenge, authToken } = await loginOptions()
     const assertion = sign(victim, challenge)
-    // 0x30 (SEQUENCE) -> 0x31: the library cannot parse the signature at all and throws.
+    // 0x30 (SEQUENCE) -> 0x31: the library cannot parse the signature at all and throws; the shop answers 401.
     assertion.response.signature = flipBit(assertion.response.signature, 0)
 
     const res = await loginVerify({ assertion, authToken })
 
-    assert.equal(res.status, 500)
+    assert.equal(res.status, 401)
+    assert.equal(res.text, '')
     assert.equal(res.body.authentication, undefined)
     assert.equal(challenges.passkeySignatureChallenge.solved, false)
   })
@@ -253,7 +260,8 @@ void describe('/rest/passkey/login-verify', () => {
 
     const res = await loginVerify({ assertion: sign(victim, challenge, { origin: 'http://evil.example:3000' }), authToken })
 
-    assert.equal(res.status, 500)
+    assert.equal(res.status, 401)
+    assert.equal(res.text, '')
     assert.equal(res.body.authentication, undefined)
   })
 
