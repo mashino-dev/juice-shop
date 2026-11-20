@@ -31,3 +31,14 @@ scripts/
 terraform/
 test/
 vagrant/
+# local secrets, state files and temporary artifacts that must never become part of the image
+code_remediation*.diff
+**/*Zone.Identifier
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/*.pem
+encryptionkeys/*.key
+!encryptionkeys/premium.key
+infrastructure/**/*.key
+**/zz-*
