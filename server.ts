@@ -53,7 +53,6 @@ import logger from './lib/logger'
 import * as utils from './lib/utils'
 import * as antiCheat from './lib/antiCheat'
 import * as security from './lib/insecurity'
-import { customizeTerraformContent } from './lib/terraformCustomization'
 import validateConfig from './lib/startup/validateConfig'
 import cleanupFtpFolder from './lib/startup/cleanupFtpFolder'
 import customizeEasterEgg from './lib/startup/customizeEasterEgg' // vuln-code-snippet hide-line
@@ -85,6 +84,8 @@ import { searchProducts } from './routes/search'
 import { trackOrder } from './routes/trackOrder'
 import { saveLoginIp } from './routes/saveLoginIp'
 import { serveKeyFiles } from './routes/keyServer'
+import { infrastructureGuard, infrastructureListingFilter, serveInfrastructureFile } from './routes/infrastructure'
+import { publicFilesErrorHandler } from './lib/publicFiles'
 import * as basketItems from './routes/basketItems'
 import { performRedirect } from './routes/redirect'
 import { serveEasterEgg } from './routes/easterEgg'
@@ -269,25 +270,15 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
     next()
   }
 
-  /* /infrastructure directory browsing */
-  app.use('/infrastructure', serveIndexMiddleware, serveIndex('infrastructure', { icons: true, view: 'details', filter: (filename) => filename !== 'README.md' }))
+  /* /infrastructure: exact allowlist of training fixtures (see routes/infrastructure.ts) */
+  app.use('/infrastructure', infrastructureGuard())
+  app.use('/infrastructure', serveIndexMiddleware, serveIndex('infrastructure', { icons: true, view: 'details', filter: infrastructureListingFilter() }))
   app.use('/infrastructure', verify.accessControlChallenges())
-  app.use('/infrastructure', (req: Request, res: Response, next: NextFunction) => {
-    const filePath = path.resolve('infrastructure', path.normalize(req.path).replace(/^[\\/]+/, ''))
-    if (!filePath.startsWith(path.resolve('infrastructure')) || filePath.endsWith('README.md')) {
-      return res.status(403).end()
-    }
-    if (filePath.endsWith('.tf') || filePath.endsWith('.yml') || filePath.endsWith('Dockerfile')) {
-      fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) return next()
-        const cleaned = data.split('\n').filter(line => !line.trim().match(/^#\s*vuln-code-snippet\s/)).map(line => line.replace(/\s*#\s*vuln-code-snippet\s.*$/, '')).join('\n')
-        const content = filePath.endsWith('.tf') ? customizeTerraformContent(cleaned) : cleaned
-        res.type('text/plain').send(content)
-      })
-    } else {
-      express.static('infrastructure')(req, res, next)
-    }
-  })
+  app.use('/infrastructure', serveInfrastructureFile())
+  app.use('/infrastructure', publicFilesErrorHandler)
+
+  /* /encryptionkeys: exact allowlist of public files, no directory listing. Answers every request, so the /encryptionkeys lines below stay unreachable (kept unchanged for the coding challenge snippet) */
+  app.use('/encryptionkeys', serveKeyFiles(), publicFilesErrorHandler)
 
   // vuln-code-snippet start directoryListingChallenge accessLogDisclosureChallenge
   /* /ftp directory browsing and file download */ // vuln-code-snippet neutral-line directoryListingChallenge
